@@ -20,6 +20,7 @@ class Food(pygame.sprite.Sprite):
     self.image.fill((255, 255, 0))
     self.rect = self.image.get_rect()
     self.rect.center = coords
+    pygame.draw.rect(self.image, (255, 0, 0), rect=self.rect)
 
   def draw(self, surface: pygame.Surface):
     surface.blit(self.image, self.rect)

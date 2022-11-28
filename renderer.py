@@ -24,7 +24,6 @@ manager = pygame_gui.UIManager(WINDOWSIZE)
 clock = pygame.time.Clock()
 is_running = True
 
-
 world = World()
 
 while is_running:
@@ -51,7 +50,7 @@ while is_running:
     random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
   )
 
-  world.growFood(coords)
+  world.update()
   world.drawAll(offscreen_surface)
 
   ### 
