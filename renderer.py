@@ -2,14 +2,15 @@
 
 import pygame
 import pygame_gui
-from food import Food
+import random
+from world import World
 from config import *
 
 pygame.init()
 
 WINDOWSIZE = (800, 800)
 
-pygame.display.set_caption('Quick Start')
+pygame.display.set_caption('aybio')
 window_surface = pygame.display.set_mode(WINDOWSIZE, pygame.RESIZABLE)
 
 background = pygame.Surface(WORLDSIZE)
@@ -23,7 +24,8 @@ manager = pygame_gui.UIManager(WINDOWSIZE)
 clock = pygame.time.Clock()
 is_running = True
 
-food = Food()
+
+world = World()
 
 while is_running:
   time_delta = clock.tick(60)/1000.0
@@ -42,9 +44,19 @@ while is_running:
   manager.update(time_delta)
 
   offscreen_surface.blit(background, (0, 0))
-  food.draw(offscreen_surface)
-  offscreen_surface = pygame.transform.scale(offscreen_surface, WINDOWSIZE)
 
+  ### simulation logic here
+  coords = (
+    random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
+    random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+  )
+
+  world.growFood(coords)
+  world.drawAll(offscreen_surface)
+
+  ### 
+
+  offscreen_surface = pygame.transform.scale(offscreen_surface, WINDOWSIZE)
 
   window_surface.blit(offscreen_surface, (0,0))
   manager.draw_ui(window_surface)
