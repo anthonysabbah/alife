@@ -8,13 +8,13 @@ from config import *
 
 pygame.init()
 
-WINDOWSIZE = (800, 800)
+WINDOWSIZE = (1000, 1000)
 
 pygame.display.set_caption('aybio')
 window_surface = pygame.display.set_mode(WINDOWSIZE, pygame.RESIZABLE)
 
 background = pygame.Surface(WORLDSIZE)
-background.fill(pygame.Color('#4cd645'))
+# background.fill(pygame.Color('#4cd645'))
 
 manager = pygame_gui.UIManager(WINDOWSIZE)
 # hello_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((350, 275), (100, 50)),
@@ -35,6 +35,7 @@ while is_running:
     elif event.type == pygame.VIDEORESIZE:
       WINDOWSIZE = (event.w,event.h)
       window_surface = pygame.display.set_mode(WINDOWSIZE,pygame.RESIZABLE)
+      manager.set_window_resolution(WINDOWSIZE)
 
     manager.process_events(event)
 
