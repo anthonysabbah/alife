@@ -55,7 +55,7 @@ class Creature(pygame.sprite.Sprite):
   def __init__(
     self,
     genes: Genome ,
-    coords: tuple[int, int] = (0, 0),
+    coords: tuple([int, int]) = (0, 0),
     brain: Brain = Brain()
   ):
     self.genes = genes
@@ -200,16 +200,16 @@ class Creature(pygame.sprite.Sprite):
     self.tempVision = self.vision
 
     self.tempVision.blit(surface, (0,0), area=self.viewRectBox)
-    # blitRotate(self.vision, self.tempVision, (0,0), self.viewRectBox.center, -self.angle)
+    blitRotate(self.vision, self.tempVision, (0,0), self.viewRectBox.center, -self.angle)
 
     pygame.draw.rect(
-      self.tempVision,
+      self.vision,
       (255,255,0),
       rect=self.tempVision.get_rect(),
       width=1
     )
 
-    surface.blit(self.tempVision, (100,100))
+    surface.blit(self.vision, (100,100))
 
     # self.vision.blit(sub, (0,0))
     self.visionArray = pygame.surfarray.pixels3d(self.vision) 

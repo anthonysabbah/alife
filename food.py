@@ -12,7 +12,7 @@ class Food(pygame.sprite.Sprite):
   coords: tuple[x: int, y: int] - x and y coords of food (centered) in world space
   energy: 
   """
-  def __init__(self, size: tuple[int, int], coords: tuple[int, int], energy=0.5):
+  def __init__(self, size: tuple([int, int]), coords: tuple([int, int]), energy=0.5):
     super().__init__()
     self.energyLeft = energy
     self.size = int(energy * size[0]), int(energy * size[1]) # in world coords, NOT WINDOW COORDS
