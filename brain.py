@@ -24,7 +24,7 @@ class Brain(nn.Module):
     super().__init__()
     '''
     Inputs: [R_l, G_l, B_l, R_r, G_r, B_r, F, Angle, Cr]
-    Outputs: [Vec, dAngle, Brightness, Mate]
+    Outputs: [Vec, dAngle, Brightness, Eat, #Mate]
     '''
 
     self.lin0 = nn.Linear(2*3 + 3, 10)
@@ -32,7 +32,7 @@ class Brain(nn.Module):
     self.cancel0 = NegateLayer(shape=(10,))
     self.relu0 = nn.ReLU()
     self.cancel1 = NegateLayer(shape=(10,))
-    self.lin1 = nn.Linear(10, 3)
+    self.lin1 = nn.Linear(10, 4)
     # torch.nn.init.uniform_(self.lin0.weight, 0, 1)
     self.softmax = nn.Softmax()
 

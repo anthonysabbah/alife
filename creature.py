@@ -67,6 +67,13 @@ class Creature(pygame.sprite.Sprite):
     width = self.genes.size 
     if self.genes.size < MAX_CREATURE_VIEW_DIST:
       width = MAX_CREATURE_VIEW_DIST
+    
+    self.energyLeft = self.genes.energyCap
+
+    self.energyLossRate = MIN_ENERGY_LOSS_RATE + \
+    (MAX_ENERGY_LOSS_RATE - MIN_ENERGY_LOSS_RATE) * \
+    (self.genes.size - MIN_CREATURE_SIZE)/ \
+    (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
 
     dims = (width, self.genes.size + MAX_CREATURE_VIEW_DIST)
 
@@ -124,6 +131,12 @@ class Creature(pygame.sprite.Sprite):
 
   # passes sensory input into neural net and registers outputs accordingly
   def update(self, creatures, foods):
+    self.energyLeft -= self.energyLossRate
+    print("energy left: ", self.energyLeft)
+    if self.energyLeft < 0:
+      #TODO: is this ok?
+      return 
+
     objects = creatures + foods
     leftAntennaDetections = np.array([[0,0,0]])
     rightAntennaDetections = np.array([[0,0,0]])
@@ -187,7 +200,12 @@ class Creature(pygame.sprite.Sprite):
     outs = self.brain(inputs).detach().numpy()
 
     print('ins: ', inputs)
+    # Outputs: [Vec, dAngle, Brightness, Eat]
     print('outs: ', outs)
+
+    #TODO: eats food for now, but should be able to eat creatures as well
+    if outs[3] > 0.5:
+      self.eat(foods)
 
     vecOffset = (np.array(self.bodyRectWorldp1) - np.array(self.bodyRectWorldp0))/2
     top = np.array(self.bodyRectWorldp0) + vecOffset
@@ -239,6 +257,18 @@ class Creature(pygame.sprite.Sprite):
     self.bodyRectWorldp1 = (pygame.math.Vector2(self.bodyRectWorld.topright) - pivot).rotate(-self.angle) + pivot 
     self.bodyRectWorldp2 = (pygame.math.Vector2(self.bodyRectWorld.bottomright) - pivot).rotate(-self.angle) + pivot 
     self.bodyRectWorldp3 = (pygame.math.Vector2(self.bodyRectWorld.bottomleft) - pivot).rotate(-self.angle) + pivot 
+
+  def eat(self, foods):
+    #TODO: surely there's a more efficient way to do this right? Suuurrellyy....
+    for f in foods:
+      #TODO: can only eat a single piece in one go for now
+      if self.rect.contains(f.rect):
+        self.energyLeft += f.energyLeft
+        foods.remove(foods.index(f))
+        
+
+  # # returns fitness function of the 
+  # def getFitness():
 
   def draw(self, surface: pygame.Surface):
     w, h = self.body.get_size()
@@ -323,6 +353,29 @@ class Creature(pygame.sprite.Sprite):
       surface=surface,
       color=pygame.Color(0,255,0),
       start_pos=self.bodyRectWorld.center,
-      end_pos=np.array(self.bodyRectWorld.center) + 5 * self.vel,
+      end_pos=np.array(self.bodyRectWorld.center) + 10 * self.vel,
       width = 2
+    )
+
+    barStart = pygame.math.Vector2(self.bodyRectWorld.bottomright) + pygame.math.Vector2(5, 0)
+    barEnd = pygame.math.Vector2(self.bodyRectWorld.bottomright) \
+      - pygame.math.Vector2(-5, MAX_CREATURE_SIZE)
+
+    energyLength = (self.energyLeft/self.genes.energyCap) * (barStart - barEnd)
+
+
+    self.energyBar = pygame.draw.line(
+      surface=surface,
+      color=(255,255,255),
+      start_pos=barStart,
+      end_pos=barEnd,
+      width=5
+    )
+
+    self.energyBar = pygame.draw.line(
+      surface=surface,
+      color=(0,255,0),
+      start_pos=barStart,
+      end_pos=barStart  - energyLength,
+      width=5
     )

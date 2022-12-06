@@ -5,8 +5,13 @@ import torch
 import random
 
 class Genome(object):
-  def __init__(self, size: int, mutationRate: int, neuronalConnections):
+  # input params are all within [1, 255]
+  def __init__(self, size: int, energyCap: int, mutationRate: int, neuronalConnections):
     self.size =  int(MIN_CREATURE_SIZE + (size/255) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))
+
+    self.energyCap = MIN_ENERGY_CAP + (self.size - MIN_CREATURE_SIZE) * \
+    (MAX_ENERGY_CAP - MIN_ENERGY_CAP) / (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
+
     self.mutationRate =  MIN_MUTATION_RATE + (size/255) * (MAX_MUTATION_RATE - MIN_MUTATION_RATE)
     self.neuronalConnections = neuronalConnections # basically an array of the "cancel" layers in the Brain()
 
@@ -31,10 +36,15 @@ def mutateGenome(g: Genome) -> Genome:
   size = g.size
   mutationRate = g.mutationRate
   connections = g.neuronalConnections
+  energyCap = g.energyCap
   if(random.random() < m):
+    # mutate size and energy cap accordingly
     size = int(MIN_CREATURE_SIZE + (random.random()) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))
+    energyCap = MIN_ENERGY_CAP + (size - MIN_CREATURE_SIZE) * \
+    (MAX_ENERGY_CAP - MIN_ENERGY_CAP) / (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
 
   if(random.random() < m):
+    # mutate mutation rate - omegalol
     mutationRate = MIN_MUTATION_RATE + (random.random()) * (MAX_MUTATION_RATE - MIN_MUTATION_RATE)
 
   connections = g.neuronalConnections
@@ -47,7 +57,7 @@ def mutateGenome(g: Genome) -> Genome:
 
   connections = {'cancel0.drop': cancel0, 'cancel1.drop': cancel1}
 
-  return Genome(size, mutationRate, connections)
+  return Genome(size, mutationRate, energyCap, connections)
 
   # for weight in neuronalConnection:
 

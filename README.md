@@ -6,4 +6,4 @@ Edit constants in `config.py`
 ### Run
 `python3 renderer.py`
 
-![screen](./imgs/screencap.png)
+![screen](./imgs/screencap_2.png)
