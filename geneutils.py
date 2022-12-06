@@ -13,7 +13,7 @@ class Genome(object):
     (MAX_ENERGY_CAP - MIN_ENERGY_CAP) / (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
 
     self.mutationRate =  MIN_MUTATION_RATE + (size/255) * (MAX_MUTATION_RATE - MIN_MUTATION_RATE)
-    self.neuronalConnections = neuronalConnections # basically an array of the "cancel" layers in the Brain()
+    self.neuronalConnections = neuronalConnections  # pytorch model state_dict
 
   def encode(self):
     return pickle.dumps(self)
@@ -39,13 +39,12 @@ def mutateGenome(g: Genome) -> Genome:
   energyCap = g.energyCap
   if(random.random() < m):
     # mutate size and energy cap accordingly
-    size = int(MIN_CREATURE_SIZE + (random.random()) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))
-    energyCap = MIN_ENERGY_CAP + (size - MIN_CREATURE_SIZE) * \
-    (MAX_ENERGY_CAP - MIN_ENERGY_CAP) / (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
+    size = 255 * random.random()
+    energyCap = 255 * random.random()
 
   if(random.random() < m):
     # mutate mutation rate - omegalol
-    mutationRate = MIN_MUTATION_RATE + (random.random()) * (MAX_MUTATION_RATE - MIN_MUTATION_RATE)
+    mutationRate = 255 * random.random()
 
   connections = g.neuronalConnections
   cancel0 = connections['cancel0.drop']
@@ -55,7 +54,8 @@ def mutateGenome(g: Genome) -> Genome:
   for i in range(len(cancel1)):
     cancel1[i] = int(not(cancel1[i])) if random.random() < m else cancel1[i]
 
-  connections = {'cancel0.drop': cancel0, 'cancel1.drop': cancel1}
+  connections['cancel0.drop'] = cancel0
+  connections['cancel1.drop'] = cancel1
 
   return Genome(size, mutationRate, energyCap, connections)
 

@@ -5,6 +5,7 @@ import numpy as np
 import pygame
 from pygame.locals import *
 import random
+import hashlib
 
 from geneutils import Genome
 from brain import Brain
@@ -68,7 +69,11 @@ class Creature(pygame.sprite.Sprite):
     if self.genes.size < MAX_CREATURE_VIEW_DIST:
       width = MAX_CREATURE_VIEW_DIST
     
+    # color representing genome
+    self.genecolor = '#' + (hashlib.sha256(self.genes.encode()).digest()).hex()[:6]
+    
     self.energyLeft = self.genes.energyCap
+    self.energyConsumed = 0
 
     self.energyLossRate = MIN_ENERGY_LOSS_RATE + \
     (MAX_ENERGY_LOSS_RATE - MIN_ENERGY_LOSS_RATE) * \
@@ -130,7 +135,7 @@ class Creature(pygame.sprite.Sprite):
     #TODO Make viewing distance dependent on genome?
 
   # passes sensory input into neural net and registers outputs accordingly
-  def update(self, creatures, foods):
+  def update(self, creatures, foods, worldBorder):
     self.energyLeft -= self.energyLossRate
     print("energy left: ", self.energyLeft)
     if self.energyLeft < 0:
@@ -170,30 +175,42 @@ class Creature(pygame.sprite.Sprite):
       creatureNum = 0
       if self.creatureSensorRadius.contains(item.rect):
         d = (pygame.Vector2(item.rect.center) - pygame.Vector2(self.rect.center)).magnitude()
-        r = self.rightAntennaRadius.width
+        r = self.creatureSensorRadius.width
         if isinstance(item, Food):
           foodNum += 1
           foodScalar += (r-d)/r 
         elif isinstance(item, Creature):
           creatureNum += 1
-          foodScalar += (r-d)/r 
+          creatureScalar += (r-d)/r 
 
-    oodScalar = foodScalar/foodNum if foodNum > 0 else foodScalar
+    foodScalar = foodScalar/foodNum if foodNum > 0 else foodScalar
     creatureScalar = creatureScalar/creatureNum if creatureNum > 0 else creatureScalar
 
     # apply sensor detected colors
     # remove extra + this creature from the list length
     leftLen = len(leftAntennaDetections) - 1
     rightLen = len(leftAntennaDetections) - 1
+    print(leftAntennaDetections)
+    print(rightAntennaDetections)
 
-    self.leftColor = ((np.sum(leftAntennaDetections, axis=0) - np.array(self.color))/leftLen)
+    worldCenter = worldBorder.center
+
+    worldBorderColor = np.array([0,255,255])
+
+    leftVec = np.array(worldCenter) - np.array(self.leftAntennaEnd)
+    rightVec = np.array(worldCenter) - np.array(self.rightAntennaEnd)
+    leftColorOffset = (np.linalg.norm(leftVec)/np.sqrt(worldBorder.width**2))*worldBorderColor - np.array(self.color)
+    rightColorOffset = (np.linalg.norm(rightVec)/np.sqrt(worldBorder.width**2))*worldBorderColor - np.array(self.color)
+
+    self.leftColor = ((np.sum(leftAntennaDetections, axis=0) + leftColorOffset)/leftLen)
     self.leftColor = np.zeros(3) if np.isnan(self.leftColor).any() else self.leftColor/255
-    self.rightColor = ((np.sum(rightAntennaDetections, axis=0) - np.array(self.color))/rightLen)
+    self.rightColor = ((np.sum(rightAntennaDetections, axis=0) + rightColorOffset)/rightLen)
     self.rightColor = np.zeros(3) if np.isnan(self.rightColor).any() else self.rightColor/255
 
     inputs = np.append(self.leftColor, self.rightColor)
     inputs = np.append(inputs, foodScalar)
-    inputs = np.append(inputs, self.angle)
+    inputs = np.append(inputs, self.energyLeft/self.genes.energyCap)
+    inputs = np.append(inputs, self.angle/360)
     inputs = np.append(inputs, creatureScalar)
     # inputs = np.append(inputs, np.random.random())
     inputs = torch.Tensor(inputs)
@@ -205,7 +222,7 @@ class Creature(pygame.sprite.Sprite):
 
     #TODO: eats food for now, but should be able to eat creatures as well
     if outs[3] > 0.5:
-      self.eat(foods)
+      foods = self.eat(foods)
 
     vecOffset = (np.array(self.bodyRectWorldp1) - np.array(self.bodyRectWorldp0))/2
     top = np.array(self.bodyRectWorldp0) + vecOffset
@@ -221,7 +238,7 @@ class Creature(pygame.sprite.Sprite):
     self.color = (255, int(np.abs(outs[2]) * 255), int(np.abs(outs[2]) * 255))
     print("color: ", self.color)
 
-    self.rotate(0)
+    return foods
 
   def move(self, dx, dy):
     self.bodyRectWorld.center = pygame.math.Vector2(self.bodyRectWorld.center) + pygame.math.Vector2(dx, dy)
@@ -260,15 +277,25 @@ class Creature(pygame.sprite.Sprite):
 
   def eat(self, foods):
     #TODO: surely there's a more efficient way to do this right? Suuurrellyy....
-    for f in foods:
+    i = 0
+    while i < len(foods):
       #TODO: can only eat a single piece in one go for now
-      if self.rect.contains(f.rect):
-        self.energyLeft += f.energyLeft
-        foods.remove(foods.index(f))
+      if self.bodyRectWorld.contains(foods[i].rect):
+        self.energyLeft += foods[i].energyLeft
+        if self.energyLeft > self.genes.energyCap:
+          self.energyLeft = self.genes.energyCap
+
+        self.energyConsumed += foods[i].energyLeft
+        foods.pop(i)
+      i += 1
+
+    return foods
         
 
-  # # returns fitness function of the 
-  # def getFitness():
+  # returns fitness function of the 
+  def getFitness(self):
+    # let this be the fitness function for now
+    return 0.5 * self.energyConsumed + 0.2
 
   def draw(self, surface: pygame.Surface):
     w, h = self.body.get_size()
@@ -277,6 +304,13 @@ class Creature(pygame.sprite.Sprite):
       self.body, 
       self.color,
       self.body.get_rect()
+    )
+
+    pygame.draw.ellipse(
+      self.body, 
+      self.genecolor,
+      self.body.get_rect(),
+      width=5
     )
 
     self.creatureSensorRadius = pygame.draw.circle(
@@ -349,13 +383,13 @@ class Creature(pygame.sprite.Sprite):
       width=1,
     )
 
-    self.velLine = pygame.draw.line(
-      surface=surface,
-      color=pygame.Color(0,255,0),
-      start_pos=self.bodyRectWorld.center,
-      end_pos=np.array(self.bodyRectWorld.center) + 10 * self.vel,
-      width = 2
-    )
+    # self.velLine = pygame.draw.line(
+    #   surface=surface,
+    #   color=pygame.Color(0,255,0),
+    #   start_pos=self.bodyRectWorld.center,
+    #   end_pos=np.array(self.bodyRectWorld.center) + 10 * self.vel,
+    #   width = 2
+    # )
 
     barStart = pygame.math.Vector2(self.bodyRectWorld.bottomright) + pygame.math.Vector2(5, 0)
     barEnd = pygame.math.Vector2(self.bodyRectWorld.bottomright) \

@@ -58,6 +58,18 @@ while is_running:
   offscreen_surface = pygame.transform.scale(offscreen_surface, WINDOWSIZE)
 
   window_surface.blit(offscreen_surface, (0,0))
+
+  font = pygame.font.Font('freesansbold.ttf', 16)
+  numText = font.render(f'Produced: {world.creatureGen}', True, (125,255,125), (0,0,125))
+  fitText = font.render(f'Max. Fit: {world.maxFitness}', True, (125,255,125), (0,0,125))
+  numTextRect = numText.get_rect()
+  numTextRect.topleft = (0,0)
+  fitTextRect = fitText.get_rect()
+  fitTextRect.topleft = numTextRect.bottomleft
+  window_surface.blit(numText, numTextRect)
+  window_surface.blit(fitText, fitTextRect)
+
+
   manager.draw_ui(window_surface)
 
   pygame.display.update()

@@ -10,9 +10,11 @@ from OpenGL.arrays import vbo
 import uuid
 from food import Food
 from creature import Creature
-from geneutils import Genome
+from geneutils import Genome, mutateGenome
 from brain import Brain
 from config import * 
+
+random.seed(TORCH_SEED)
 
 class World(object):
   def __init__(self, borderDims=list([int, int]), foodList=[], creatureList=[], foodPerSecond: int = 1):
@@ -22,6 +24,8 @@ class World(object):
     self.foodPerSecond = foodPerSecond 
     self.lastUpdateTime = time.time()
     self.borders = pygame.Rect(0, 0, borderDims[0], borderDims[1])
+    self.creatureGen = 0
+    self.maxFitness = -1
 
     torch.manual_seed(TORCH_SEED)
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,7 +39,7 @@ class World(object):
 
   def growFood(self):
     t = time.time()
-    if t - self.lastUpdateTime > 1:
+    if t - self.lastUpdateTime > 1 and len(self.foodList) < MAX_FOOD:
       for i in range(self.foodPerSecond):
         coords = (
           random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
@@ -45,7 +49,6 @@ class World(object):
       self.lastUpdateTime = t 
 
   def updateCreatures(self):
-    self.randomGen = 0
     if len(self.creatureList) < NUM_CREATURES:
       coords = (
         random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
@@ -60,15 +63,22 @@ class World(object):
         newBrain.state_dict()
       )
       # mutate existing high fitness genes instead of randomly generating genes
-      # if(self.randomGen >= NUM_CREATURES):
-      #   genes = mutateGenes
+      if(self.creatureGen >= NUM_CREATURES):
+        chosenGenes = None
+        self.maxFitness = -1
+        for c in self.creatureList:
+          if c.getFitness() > self.maxFitness:
+            self.maxFitness = c.getFitness()
+            chosenGenes = c.genes
+        genes = mutateGenome(chosenGenes)
 
       id = str(uuid.uuid4().hex)
       self.creatureList.append(Creature(genes=genes, coords=coords, id=id))
+      self.creatureGen += 1
     
     for c in self.creatureList:
       if (self.borders.contains(c.rect) and c.energyLeft >= c.energyLossRate):
-        c.update(self.creatureList, self.foodList)
+        self.foodList = c.update(self.creatureList, self.foodList, self.borders)
       else: 
         self.creatureList.remove(c)
 
@@ -81,3 +91,6 @@ class World(object):
 
     for c in self.creatureList:
       c.draw(surface)
+    
+
+
