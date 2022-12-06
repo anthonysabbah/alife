@@ -24,7 +24,7 @@ manager = pygame_gui.UIManager(WINDOWSIZE)
 clock = pygame.time.Clock()
 is_running = True
 
-world = World()
+world = World(borderDims=WINDOWSIZE)
 
 while is_running:
   time_delta = clock.tick(60)/1000.0
@@ -51,8 +51,7 @@ while is_running:
     random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
   )
 
-  world.update()
-  world.drawAll(offscreen_surface)
+  world.update(offscreen_surface)
 
   ### 
 

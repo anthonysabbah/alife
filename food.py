@@ -17,7 +17,8 @@ class Food(pygame.sprite.Sprite):
     self.energyLeft = energy
     self.size = int(energy * size[0]), int(energy * size[1]) # in world coords, NOT WINDOW COORDS
     self.image = pygame.Surface(self.size).convert_alpha()
-    self.image.fill((255, 255, 0))
+    self.color = (255, 255, 0)
+    self.image.fill(self.color)
     self.rect = self.image.get_rect()
     self.rect.center = coords
     pygame.draw.rect(self.image, (255, 0, 0), rect=self.rect)

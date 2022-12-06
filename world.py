@@ -14,20 +14,22 @@ from brain import Brain
 from config import * 
 
 class World(object):
-  def __init__(self, foodList=[], creatureList=[], foodPerSecond: int = 1):
+  def __init__(self, borderDims=list([int, int]), foodList=[], creatureList=[], foodPerSecond: int = 1):
     # self.entities = []
     self.foodList = foodList
     self.creatureList = creatureList
-    self.a = np.array([1,0])
     self.foodPerSecond = foodPerSecond 
     self.lastUpdateTime = time.time()
+    self.borders = pygame.Rect(0, 0, borderDims[0], borderDims[1])
+
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {self.device} device")
 
 
-  def update(self):
+  def update(self, surface: pygame.Surface):
       self.growFood()
       self.updateCreatures()
+      self.drawAll(surface=surface)
 
   def growFood(self):
     t = time.time()
@@ -47,13 +49,22 @@ class World(object):
         random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
       )
       newBrain = Brain().to(device=self.device)
-      genes = Genome(random.randint(0, 255), random.randint(0, 255), newBrain.state_dict())
+      genes = Genome(random.randint(1, 255), random.randint(1, 255), newBrain.state_dict())
       self.creatureList.append(Creature(genes=genes, coords=coords))
     
     for c in self.creatureList:
-      c.update()
+      if self.borders.contains(c.rect):
+        c.update(self.creatureList, self.foodList)
+      else: 
+        self.creatureList.remove(c)
+
+    print(self.creatureList[0].leftColor)
+    print(self.creatureList[0].rightColor)
 
   def drawAll(self, surface: pygame.Surface):
+    # Draw world border
+    self.borders = pygame.draw.rect(surface=surface, rect=self.borders, width=5, color=(0, 255, 255))
+
     for f in self.foodList:
       f.draw(surface)
 
