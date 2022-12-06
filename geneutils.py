@@ -1,48 +1,66 @@
 from config import *
-import io
+import pickle
+from brain import Brain
+import torch
+import random
 
-"""
-Will use direct encoding for neuronal connections  in brain (weights)
-
-The brains will have an architecture that is constant, and inference will be performed
-with pytorch:
-
-class NegateLayer(nn.Module):
-  def __init__(self, shape):
-    super().__init__()
-    self.drop = torch.nn.Parameter(torch.randint(high=2, size=shape), requires_grad=False)
-
-  def forward(self, x):
-    return x * self.drop
-
-# Define model
-class Brain(nn.Module):
-  def __init__(self):
-    super().__init__()
-    self.flatten = nn.Flatten(start_dim=0)
-    self.lin0 = nn.Linear(3*10*10, 10, bias=False)
-    self.cancel0 = NegateLayer(shape=(1,10))
-    self.relu0 = nn.ReLU()
-    self.cancel1 = NegateLayer(shape=(1,10))
-    self.lin1 = nn.Linear(10, 4, bias=False)
-
-  def forward(self, x):
-    x = self.flatten(x)
-    x = self.lin0(x)
-    x = self.cancel0(x)
-    x = self.relu0(x)
-    x = self.cancel1(x)
-    logits = self.lin1(x)
-    return logits
-
-params: 3060
-
-"""
-class Genome:
+class Genome(object):
   def __init__(self, size: int, mutationRate: int, neuronalConnections):
-    self.size =  MIN_CREATURE_SIZE + (size/255) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
+    self.size =  int(MIN_CREATURE_SIZE + (size/255) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))
     self.mutationRate =  MIN_MUTATION_RATE + (size/255) * (MAX_MUTATION_RATE - MIN_MUTATION_RATE)
-    self.neuronalConnections = neuronalConnections
+    self.neuronalConnections = neuronalConnections # basically an array of the "cancel" layers in the Brain()
 
-  # def __repr__(self):
-  #   return bin(self.size) + bin(self.mutationRate)[2:] + bin(self.neuronalConnections)[2:]
+  def encode(self):
+    return pickle.dumps(self)
+
+  def __eq__(self, __o: object) -> bool:
+    if isinstance(__o, Genome):
+      if self.size != __o.size:
+        return False
+      if self.mutationRate != __o.mutationRate:
+        return False
+      if self.neuronalConnections != __o.neuronalConnections:
+        return False
+      return True
+
+    return False
+   
+
+def mutateGenome(g: Genome) -> Genome:
+  m = g.mutationRate
+  size = g.size
+  mutationRate = g.mutationRate
+  connections = g.neuronalConnections
+  if(random.random() < m):
+    size = int(MIN_CREATURE_SIZE + (random.random()) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))
+
+  if(random.random() < m):
+    mutationRate = MIN_MUTATION_RATE + (random.random()) * (MAX_MUTATION_RATE - MIN_MUTATION_RATE)
+
+  connections = g.neuronalConnections
+  cancel0 = connections['cancel0.drop']
+  cancel1 = connections['cancel1.drop']
+  for i in range(len(cancel0)):
+    cancel0[i] = int(not(cancel0[i])) if random.random() < m else cancel0[i]
+  for i in range(len(cancel1)):
+    cancel1[i] = int(not(cancel1[i])) if random.random() < m else cancel1[i]
+
+  connections = {'cancel0.drop': cancel0, 'cancel1.drop': cancel1}
+
+  return Genome(size, mutationRate, connections)
+
+  # for weight in neuronalConnection:
+
+# test code
+# from brain import Brain
+# b = Brain()
+# weights = b.state_dict()
+# conn = {}
+# conn['cancel0.drop'] = weights['cancel0.drop']
+# conn['cancel1.drop'] = weights['cancel1.drop']
+# print(conn)
+
+# g = Genome(size=120, mutationRate=50, neuronalConnections=conn)
+# newG = mutateGenome(g)
+# print(newG.neuronalConnections)
+  

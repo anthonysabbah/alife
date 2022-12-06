@@ -7,6 +7,7 @@ import torch
 from OpenGL import GLU # OpenGL Utility Library, extends OpenGL functionality
 from OpenGL.arrays import vbo
 
+import uuid
 from food import Food
 from creature import Creature
 from geneutils import Genome
@@ -22,6 +23,7 @@ class World(object):
     self.lastUpdateTime = time.time()
     self.borders = pygame.Rect(0, 0, borderDims[0], borderDims[1])
 
+    torch.manual_seed(TORCH_SEED)
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {self.device} device")
 
@@ -50,16 +52,14 @@ class World(object):
       )
       newBrain = Brain().to(device=self.device)
       genes = Genome(random.randint(1, 255), random.randint(1, 255), newBrain.state_dict())
-      self.creatureList.append(Creature(genes=genes, coords=coords))
+      id = str(uuid.uuid4().hex)
+      self.creatureList.append(Creature(genes=genes, coords=coords, id=id))
     
     for c in self.creatureList:
       if self.borders.contains(c.rect):
         c.update(self.creatureList, self.foodList)
       else: 
         self.creatureList.remove(c)
-
-    print(self.creatureList[0].leftColor)
-    print(self.creatureList[0].rightColor)
 
   def drawAll(self, surface: pygame.Surface):
     # Draw world border

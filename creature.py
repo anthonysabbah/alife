@@ -56,10 +56,12 @@ def rot_center(image, angle):
 class Creature(pygame.sprite.Sprite):
   def __init__(
     self,
+    id,
     genes: Genome ,
     coords: tuple([int, int]) = (0, 0),
     brain: Brain = Brain()
   ):
+    self.id=id
     self.genes = genes
 
     width = self.genes.size 
@@ -93,6 +95,7 @@ class Creature(pygame.sprite.Sprite):
     # TODO: dont hard-code this
     self.brain = Brain().to('cpu')
     self.brain.load_state_dict(self.genes.neuronalConnections)
+    self.brain.eval()
 
     # to be initialized soon
     self.mouthRect = None
@@ -124,6 +127,8 @@ class Creature(pygame.sprite.Sprite):
     objects = creatures + foods
     leftAntennaDetections = np.array([[0,0,0]])
     rightAntennaDetections = np.array([[0,0,0]])
+    foodScalar = 0
+    creatureScalar = 0
 
     for item in objects:
       if self.leftAntennaRadius.contains(item.rect):
@@ -148,24 +153,36 @@ class Creature(pygame.sprite.Sprite):
         )
         # print(rightAntennaDetections, 'R')
 
-      foodScalar = 0
-      if self.creatureSensorRadius.contains(item.rect) and isinstance(item, Food):
+      foodNum = 0
+      creatureNum = 0
+      if self.creatureSensorRadius.contains(item.rect):
         d = (pygame.Vector2(item.rect.center) - pygame.Vector2(self.rect.center)).magnitude()
         r = self.rightAntennaRadius.width
-        foodScalar = (r-d)/r if r != 0 else 1
+        if isinstance(item, Food):
+          foodNum += 1
+          foodScalar += (r-d)/r 
+        elif isinstance(item, Creature):
+          creatureNum += 1
+          foodScalar += (r-d)/r 
+
+    oodScalar = foodScalar/foodNum if foodNum > 0 else foodScalar
+    creatureScalar = creatureScalar/creatureNum if creatureNum > 0 else creatureScalar
 
     # apply sensor detected colors
+    # remove extra + this creature from the list length
     leftLen = len(leftAntennaDetections) - 1
     rightLen = len(leftAntennaDetections) - 1
-    self.leftColor = (np.sum(leftAntennaDetections, axis=0)/leftLen)
+
+    self.leftColor = ((np.sum(leftAntennaDetections, axis=0) - np.array(self.color))/leftLen)
     self.leftColor = np.zeros(3) if np.isnan(self.leftColor).any() else self.leftColor/255
-    self.rightColor = (np.mean(rightAntennaDetections, axis=0)/rightLen)
+    self.rightColor = ((np.sum(rightAntennaDetections, axis=0) - np.array(self.color))/rightLen)
     self.rightColor = np.zeros(3) if np.isnan(self.rightColor).any() else self.rightColor/255
 
     inputs = np.append(self.leftColor, self.rightColor)
     inputs = np.append(inputs, foodScalar)
     inputs = np.append(inputs, self.angle)
-    inputs = np.append(inputs, np.random.random())
+    inputs = np.append(inputs, creatureScalar)
+    # inputs = np.append(inputs, np.random.random())
     inputs = torch.Tensor(inputs)
     outs = self.brain(inputs).detach().numpy()
 
@@ -176,10 +193,10 @@ class Creature(pygame.sprite.Sprite):
     top = np.array(self.bodyRectWorldp0) + vecOffset
     bottom = np.array(self.bodyRectWorldp3) + vecOffset
     dirVec = (top - bottom)/np.linalg.norm(top - bottom)
-    vel = 5 * outs[0] * dirVec
+    vel = MAX_SPEED * outs[0] * dirVec
     print("vel: ", vel)
     self.vel = np.asarray(vel, dtype=int)
-    dTheta = int(10 * outs[1])
+    dTheta = int(MAX_ANGLE_RATE * outs[1] * (-1 if outs[1] < 0.5 else 1))
 
     self.move(self.vel[0], self.vel[1])
     self.rotate(2 * dTheta)
@@ -187,8 +204,6 @@ class Creature(pygame.sprite.Sprite):
     print("color: ", self.color)
 
     self.rotate(0)
-
-
 
   def move(self, dx, dy):
     self.bodyRectWorld.center = pygame.math.Vector2(self.bodyRectWorld.center) + pygame.math.Vector2(dx, dy)
@@ -207,7 +222,6 @@ class Creature(pygame.sprite.Sprite):
     self.bodyRectWorldp1 = self.bodyRectWorldp1 + pygame.math.Vector2(dx, dy)
     self.bodyRectWorldp2 = self.bodyRectWorldp2 + pygame.math.Vector2(dx, dy)
     self.bodyRectWorldp3 = self.bodyRectWorldp3 + pygame.math.Vector2(dx, dy)
-
 
   def rotate(self, dTheta):
     self.angle += dTheta
@@ -235,18 +249,11 @@ class Creature(pygame.sprite.Sprite):
       self.body.get_rect()
     )
 
-    pygame.draw.ellipse(
-      self.body, 
-      (0,0,255), 
-      self.body.get_rect(),
-      3
-    )
-
     self.creatureSensorRadius = pygame.draw.circle(
       surface=surface, 
       color=pygame.Color(255,255,255), 
       center=self.bodyRectWorld.center,
-      radius=self.body.get_width() * 3,
+      radius=self.body.get_width() * SENSOR_RANGE,
       width=1,
     )
 
@@ -273,7 +280,7 @@ class Creature(pygame.sprite.Sprite):
     # pygame.draw.rect(surface=surface, rect=self.bodyRectWorld, color=(0,255,255), width=1)
     self.rect = pygame.draw.lines(
       surface=surface, 
-      color=(255, 0, 0), 
+      color=(0, 0, 0), 
       closed=True, 
       points=[self.bodyRectWorldp0, self.bodyRectWorldp1, self.bodyRectWorldp2, self.bodyRectWorldp3], 
       width=1
@@ -300,7 +307,7 @@ class Creature(pygame.sprite.Sprite):
       surface=surface, 
       color=pygame.Color(255,255,255), 
       center=self.leftAntennaEnd,
-      radius=self.body.get_width(),
+      radius=self.body.get_width() * ANTENNA_RANGE_SCALER,
       width=1,
     )
 
@@ -308,7 +315,7 @@ class Creature(pygame.sprite.Sprite):
       surface=surface, 
       color=pygame.Color(255,255,255), 
       center=self.rightAntennaEnd,
-      radius=self.body.get_width(),
+      radius=self.body.get_width() * ANTENNA_RANGE_SCALER,
       width=1,
     )
 

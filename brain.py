@@ -13,7 +13,7 @@ torch.set_default_dtype(torch.float32)
 class NegateLayer(nn.Module):
   def __init__(self, shape):
     super().__init__()
-    self.drop = torch.nn.Parameter(torch.randint(high=1, size=shape), requires_grad=False)
+    self.drop = torch.nn.Parameter(torch.randint(high=2, size=shape), requires_grad=False)
 
   def forward(self, x):
     return x * self.drop
@@ -23,16 +23,17 @@ class Brain(nn.Module):
   def __init__(self):
     super().__init__()
     '''
-    Will have 11 inputs in the future, right now for testing purposes we only use 9:
-    Inputs: [R_l, G_l, B_l, R_r, G_r, B_r, F, Angle, Rand]
-    Outputs: [Vec, dAngle, Brightness]
+    Inputs: [R_l, G_l, B_l, R_r, G_r, B_r, F, Angle, Cr]
+    Outputs: [Vec, dAngle, Brightness, Mate]
     '''
 
     self.lin0 = nn.Linear(2*3 + 3, 10)
+    # torch.nn.init.uniform_(self.lin0.weight, 0, 1)
     self.cancel0 = NegateLayer(shape=(10,))
     self.relu0 = nn.ReLU()
     self.cancel1 = NegateLayer(shape=(10,))
     self.lin1 = nn.Linear(10, 3)
+    # torch.nn.init.uniform_(self.lin0.weight, 0, 1)
     self.softmax = nn.Softmax()
 
   def forward(self, x):
