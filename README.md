@@ -1,4 +1,4 @@
-## SimpleLife - A Simple 2D Artificial World Sim
+## SimpleLife - A Simple 2D Artificial Life Sim
 
 ### Configuration
 Edit constants in `config.py`
