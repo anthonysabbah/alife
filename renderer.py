@@ -4,6 +4,7 @@ import pygame
 import pygame_gui
 import random
 from world import World
+from creature import Creature
 from config import *
 
 pygame.init()
@@ -36,6 +37,22 @@ while is_running:
       WINDOWSIZE = (event.w,event.h)
       window_surface = pygame.display.set_mode(WINDOWSIZE,pygame.RESIZABLE)
       manager.set_window_resolution(WINDOWSIZE)
+
+    elif event.type == pygame.MOUSEBUTTONDOWN:
+      button1 = pygame.mouse.get_pressed(num_buttons=3)[0]
+      if button1:
+        pos = list(pygame.mouse.get_pos())
+        widthScale = WORLDSIZE[0]/window_surface.get_width()
+        heightScale = WORLDSIZE[1]/window_surface.get_height()
+        pos[0] = pos[0] * widthScale
+        pos[1] = pos[1] * heightScale
+        for c in world.creatureList:
+          c: Creature
+          if c.rect.collidepoint(*pos):
+            print(c.genecolor)
+            print(c.age)
+            print(c.energyLeft)
+            print(c.getFitness())
 
     manager.process_events(event)
 

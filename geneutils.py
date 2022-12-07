@@ -32,32 +32,45 @@ class Genome(object):
    
 
 def mutateGenome(g: Genome) -> Genome:
-  m = g.mutationRate
-  size = g.size
-  mutationRate = g.mutationRate
-  connections = g.neuronalConnections
-  energyCap = g.energyCap
-  if(random.random() < m):
-    # mutate size and energy cap accordingly
-    size = 255 * random.random()
-    energyCap = 255 * random.random()
+  #TODO: is this good?
+  if random.random() < g.mutationRate:
+    m = g.mutationRate
+    size = g.size
+    mutationRate = g.mutationRate
+    connections = g.neuronalConnections
+    energyCap = g.energyCap
+    if(random.random() < m):
+      # mutate size and energy cap accordingly
+      size = 255 * random.random()
+      energyCap = 255 * random.random()
 
-  if(random.random() < m):
-    # mutate mutation rate - omegalol
-    mutationRate = 255 * random.random()
+    if(random.random() < m):
+      # mutate mutation rate - omegalol
+      mutationRate = 255 * random.random()
 
-  connections = g.neuronalConnections
-  cancel0 = connections['cancel0.drop']
-  cancel1 = connections['cancel1.drop']
-  for i in range(len(cancel0)):
-    cancel0[i] = int(not(cancel0[i])) if random.random() < m else cancel0[i]
-  for i in range(len(cancel1)):
-    cancel1[i] = int(not(cancel1[i])) if random.random() < m else cancel1[i]
+    connections = g.neuronalConnections
+    cancel0 = connections['cancel0.drop']
+    # lin0w = connections['lin0.weight']
+    # lin1w = connections['lin1.weight']
 
-  connections['cancel0.drop'] = cancel0
-  connections['cancel1.drop'] = cancel1
+    for i in range(len(cancel0)):
+      cancel0[i] = int(not(cancel0[i])) if random.random() < m else cancel0[i]
 
-  return Genome(size, mutationRate, energyCap, connections)
+    # for i in range(len(lin0w)):
+    #   lin0w[i] = random.random()
+
+    # for i in range(len(lin1w)):
+    #   lin1w[i] = random.random()
+
+    connections['cancel0.drop'] = cancel0
+    # connections['lin0.weight'] = lin0w
+    # connections['lin1.weight'] = lin1w
+
+    return Genome(size, mutationRate, energyCap, connections)
+  return g
+
+# def reproduce(g0: Genome, g1: Genome) -> Genome:
+
 
   # for weight in neuronalConnection:
 

@@ -15,19 +15,23 @@ from brain import Brain
 from config import * 
 
 random.seed(TORCH_SEED)
+torch.manual_seed(TORCH_SEED)
+np.random.seed(TORCH_SEED)
 
 class World(object):
-  def __init__(self, borderDims=list([int, int]), foodList=[], creatureList=[], foodPerSecond: int = 1):
+  def __init__(self, borderDims=list([int, int]), foodList=[], creatureList=[], foodPerTimestep: int = 0.5):
     # self.entities = []
     self.foodList = foodList
     self.creatureList = creatureList
-    self.foodPerSecond = foodPerSecond 
+    self.foodPerTimestep = foodPerTimestep 
     self.lastUpdateTime = time.time()
     self.borders = pygame.Rect(0, 0, borderDims[0], borderDims[1])
     self.creatureGen = 0
     self.maxFitness = -1
+    self.foodToGive = foodPerTimestep
+    self.timePassed = 0
+    self.bestGenome = -1
 
-    torch.manual_seed(TORCH_SEED)
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {self.device} device")
 
@@ -36,17 +40,19 @@ class World(object):
       self.growFood()
       self.updateCreatures()
       self.drawAll(surface=surface)
+      self.timePassed += 1
 
   def growFood(self):
-    t = time.time()
-    if t - self.lastUpdateTime > 1 and len(self.foodList) < MAX_FOOD:
-      for i in range(self.foodPerSecond):
-        coords = (
-          random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
-          random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
-        )
-        self.foodList.append(Food(coords=coords, size=FOODSIZE))
-      self.lastUpdateTime = t 
+    if len(self.foodList) < MAX_FOOD and (int(self.foodToGive) > 0):
+      coords = (
+        random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
+        random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+      )
+      self.foodList.append(Food(coords=coords, size=FOODSIZE))
+      self.foodToGive -= self.foodToGive
+
+    self.foodToGive += self.foodPerTimestep
+    self.foodToGive = min(MAX_FOOD, self.foodToGive)
 
   def updateCreatures(self):
     if len(self.creatureList) < NUM_CREATURES:
@@ -64,13 +70,11 @@ class World(object):
       )
       # mutate existing high fitness genes instead of randomly generating genes
       if(self.creatureGen >= NUM_CREATURES):
-        chosenGenes = None
-        self.maxFitness = -1
         for c in self.creatureList:
           if c.getFitness() > self.maxFitness:
             self.maxFitness = c.getFitness()
-            chosenGenes = c.genes
-        genes = mutateGenome(chosenGenes)
+            self.bestGenome = c.genes
+        genes = mutateGenome(self.bestGenome)
 
       id = str(uuid.uuid4().hex)
       self.creatureList.append(Creature(genes=genes, coords=coords, id=id))
@@ -78,7 +82,7 @@ class World(object):
     
     for c in self.creatureList:
       if (self.borders.contains(c.rect) and c.energyLeft >= c.energyLossRate):
-        self.foodList = c.update(self.creatureList, self.foodList, self.borders)
+        self.creatureList, self.foodList = c.update(self.creatureList, self.foodList, self.borders)
       else: 
         self.creatureList.remove(c)
 

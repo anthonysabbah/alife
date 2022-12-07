@@ -6,8 +6,9 @@ import pygame
 from pygame.locals import *
 import random
 import hashlib
+import uuid
 
-from geneutils import Genome
+from geneutils import Genome, mutateGenome
 from brain import Brain
 from food import Food
 import cv2
@@ -64,6 +65,8 @@ class Creature(pygame.sprite.Sprite):
   ):
     self.id=id
     self.genes = genes
+    self.age = 0
+    self.babiesMade = 0
 
     width = self.genes.size 
     if self.genes.size < MAX_CREATURE_VIEW_DIST:
@@ -91,8 +94,8 @@ class Creature(pygame.sprite.Sprite):
     self.bodyRectImage = self.body.get_rect()
     self.bodyRectImage.midbottom = (self.image.get_rect()).midbottom
     # TODO: add bodyRect world coords here later
-    self.bodyRectWorld = self.body.get_rect()
-    # self.bodyRectWorld.center = self.
+    self.rect = self.body.get_rect()
+    # self.rect.center = self.
 
     # transparent canvases
     self.image.set_colorkey((0, 0, 0))
@@ -100,8 +103,8 @@ class Creature(pygame.sprite.Sprite):
 
     self.imageWorldRect = self.image.get_rect()
 
-    self.bodyRectWorld.center = coords
-    self.imageWorldRect.midbottom = self.bodyRectWorld.midbottom
+    self.rect.center = coords
+    self.imageWorldRect.midbottom = self.rect.midbottom
 
     self.angle = 0
     # TODO: dont hard-code this
@@ -111,24 +114,24 @@ class Creature(pygame.sprite.Sprite):
 
     # to be initialized soon
     self.mouthRect = None
-    self.bodyRectWorldp0 = self.bodyRectWorld.topleft 
-    self.bodyRectWorldp1 = self.bodyRectWorld.topright 
-    self.bodyRectWorldp2 = self.bodyRectWorld.bottomright 
-    self.bodyRectWorldp3 = self.bodyRectWorld.bottomleft 
+    self.rectp0 = self.rect.topleft 
+    self.rectp1 = self.rect.topright 
+    self.rectp2 = self.rect.bottomright 
+    self.rectp3 = self.rect.bottomleft 
 
-    self.leftAntennaStartInit = self.leftAntennaStart = pygame.math.Vector2(self.bodyRectWorldp0) + pygame.math.Vector2(int(self.genes.size/4), 0)
-    self.leftAntennaEndInit = self.leftAntennaEnd = pygame.math.Vector2(self.bodyRectWorldp0) + pygame.math.Vector2(0, -self.genes.size)
+    self.leftAntennaStartInit = self.leftAntennaStart = pygame.math.Vector2(self.rectp0) + pygame.math.Vector2(int(self.genes.size/4), 0)
+    self.leftAntennaEndInit = self.leftAntennaEnd = pygame.math.Vector2(self.rectp0) + pygame.math.Vector2(0, -self.genes.size)
 
-    self.rightAntennaStartInit = self.rightAntennaStart = pygame.math.Vector2(self.bodyRectWorldp1) + pygame.math.Vector2(-int(self.genes.size/4), 0)
-    self.rightAntennaEndInit =  self.rightAntennaEnd = pygame.math.Vector2(self.bodyRectWorldp1) + pygame.math.Vector2(0, -self.genes.size)
+    self.rightAntennaStartInit = self.rightAntennaStart = pygame.math.Vector2(self.rectp1) + pygame.math.Vector2(-int(self.genes.size/4), 0)
+    self.rightAntennaEndInit =  self.rightAntennaEnd = pygame.math.Vector2(self.rectp1) + pygame.math.Vector2(0, -self.genes.size)
 
     self.leftColor = np.zeros(3) 
     self.rightColor = np.zeros(3)
 
-    self.leftAntennaRadius = pygame.Rect(self.bodyRectWorld)
-    self.rightAntennaRadius = pygame.Rect(self.bodyRectWorld)
-    self.creatureSensorRadius = pygame.Rect(self.bodyRectWorld)
-    self.rect = self.bodyRectWorld
+    self.leftAntennaRadius = pygame.Rect(self.rect)
+    self.rightAntennaRadius = pygame.Rect(self.rect)
+    self.creatureSensorRadius = pygame.Rect(self.rect)
+    self.rect = self.rect
     self.vel = [0,0]
 
     # self.viewCanvas = pygame.Surface((self.genes.size,)*2).convert_alpha()
@@ -137,7 +140,7 @@ class Creature(pygame.sprite.Sprite):
   # passes sensory input into neural net and registers outputs accordingly
   def update(self, creatures, foods, worldBorder):
     self.energyLeft -= self.energyLossRate
-    print("energy left: ", self.energyLeft)
+    # print("energy left: ", self.energyLeft)
     if self.energyLeft < 0:
       #TODO: is this ok?
       return 
@@ -190,8 +193,8 @@ class Creature(pygame.sprite.Sprite):
     # remove extra + this creature from the list length
     leftLen = len(leftAntennaDetections) - 1
     rightLen = len(leftAntennaDetections) - 1
-    print(leftAntennaDetections)
-    print(rightAntennaDetections)
+    # print(leftAntennaDetections)
+    # print(rightAntennaDetections)
 
     worldCenter = worldBorder.center
 
@@ -216,32 +219,38 @@ class Creature(pygame.sprite.Sprite):
     inputs = torch.Tensor(inputs)
     outs = self.brain(inputs).detach().numpy()
 
-    print('ins: ', inputs)
+    # print('ins: ', inputs)
     # Outputs: [Vec, dAngle, Brightness, Eat]
-    print('outs: ', outs)
+    # print('outs: ', outs)
 
     #TODO: eats food for now, but should be able to eat creatures as well
     if outs[3] > 0.5:
       foods = self.eat(foods)
 
-    vecOffset = (np.array(self.bodyRectWorldp1) - np.array(self.bodyRectWorldp0))/2
-    top = np.array(self.bodyRectWorldp0) + vecOffset
-    bottom = np.array(self.bodyRectWorldp3) + vecOffset
+    if outs[4] > 0.9:
+      creatures = self.reproduce(creatures)
+
+    vecOffset = (np.array(self.rectp1) - np.array(self.rectp0))/2
+    top = np.array(self.rectp0) + vecOffset
+    bottom = np.array(self.rectp3) + vecOffset
     dirVec = (top - bottom)/np.linalg.norm(top - bottom)
     vel = MAX_SPEED * outs[0] * dirVec
-    print("vel: ", vel)
+    # print("vel: ", vel)
     self.vel = np.asarray(vel, dtype=int)
     dTheta = int(MAX_ANGLE_RATE * outs[1] * (-1 if outs[1] < 0.5 else 1))
 
     self.move(self.vel[0], self.vel[1])
-    self.rotate(2 * dTheta)
-    self.color = (255, int(np.abs(outs[2]) * 255), int(np.abs(outs[2]) * 255))
-    print("color: ", self.color)
+    self.rotate(dTheta)
+    # TODO: this is hacky, fix later plz
+    self.color = (255, min(int(outs[2] * 255), 255), min(int(outs[2] * 255), 255))
+    # print("color: ", self.color)
 
-    return foods
+    self.age += 1
+
+    return creatures, foods
 
   def move(self, dx, dy):
-    self.bodyRectWorld.center = pygame.math.Vector2(self.bodyRectWorld.center) + pygame.math.Vector2(dx, dy)
+    self.rect.center = pygame.math.Vector2(self.rect.center) + pygame.math.Vector2(dx, dy)
 
     self.leftAntennaStartInit = self.leftAntennaStartInit + pygame.math.Vector2(dx, dy)
     self.leftAntennaEndInit = self.leftAntennaEndInit + pygame.math.Vector2(dx, dy)
@@ -253,16 +262,16 @@ class Creature(pygame.sprite.Sprite):
     # self.rightAntennaStart = self.rightAntennaStartInit
     # self.rightAntennaEnd   = self.rightAntennaEndInit
 
-    self.bodyRectWorldp0 = self.bodyRectWorldp0 + pygame.math.Vector2(dx, dy)
-    self.bodyRectWorldp1 = self.bodyRectWorldp1 + pygame.math.Vector2(dx, dy)
-    self.bodyRectWorldp2 = self.bodyRectWorldp2 + pygame.math.Vector2(dx, dy)
-    self.bodyRectWorldp3 = self.bodyRectWorldp3 + pygame.math.Vector2(dx, dy)
+    self.rectp0 = self.rectp0 + pygame.math.Vector2(dx, dy)
+    self.rectp1 = self.rectp1 + pygame.math.Vector2(dx, dy)
+    self.rectp2 = self.rectp2 + pygame.math.Vector2(dx, dy)
+    self.rectp3 = self.rectp3 + pygame.math.Vector2(dx, dy)
 
   def rotate(self, dTheta):
     self.angle += dTheta
     self.angle = self.angle % 360
 
-    pivot = pygame.math.Vector2(self.bodyRectWorld.center)
+    pivot = pygame.math.Vector2(self.rect.center)
 
     self.leftAntennaStart = (self.leftAntennaStartInit - pivot).rotate(-self.angle) + pivot
     self.leftAntennaEnd = (self.leftAntennaEndInit - pivot).rotate(-self.angle) + pivot
@@ -270,17 +279,17 @@ class Creature(pygame.sprite.Sprite):
     self.rightAntennaStart = (self.rightAntennaStartInit - pivot).rotate(-self.angle) + pivot
     self.rightAntennaEnd = (self.rightAntennaEndInit - pivot).rotate(-self.angle) + pivot
 
-    self.bodyRectWorldp0 = (pygame.math.Vector2(self.bodyRectWorld.topleft) - pivot).rotate(-self.angle) + pivot 
-    self.bodyRectWorldp1 = (pygame.math.Vector2(self.bodyRectWorld.topright) - pivot).rotate(-self.angle) + pivot 
-    self.bodyRectWorldp2 = (pygame.math.Vector2(self.bodyRectWorld.bottomright) - pivot).rotate(-self.angle) + pivot 
-    self.bodyRectWorldp3 = (pygame.math.Vector2(self.bodyRectWorld.bottomleft) - pivot).rotate(-self.angle) + pivot 
+    self.rectp0 = (pygame.math.Vector2(self.rect.topleft) - pivot).rotate(-self.angle) + pivot 
+    self.rectp1 = (pygame.math.Vector2(self.rect.topright) - pivot).rotate(-self.angle) + pivot 
+    self.rectp2 = (pygame.math.Vector2(self.rect.bottomright) - pivot).rotate(-self.angle) + pivot 
+    self.rectp3 = (pygame.math.Vector2(self.rect.bottomleft) - pivot).rotate(-self.angle) + pivot 
 
   def eat(self, foods):
     #TODO: surely there's a more efficient way to do this right? Suuurrellyy....
     i = 0
     while i < len(foods):
       #TODO: can only eat a single piece in one go for now
-      if self.bodyRectWorld.contains(foods[i].rect):
+      if self.rect.colliderect(foods[i].rect):
         self.energyLeft += foods[i].energyLeft
         if self.energyLeft > self.genes.energyCap:
           self.energyLeft = self.genes.energyCap
@@ -290,33 +299,49 @@ class Creature(pygame.sprite.Sprite):
       i += 1
 
     return foods
-        
+
+  def reproduce(self, creatures):
+    cost = int(self.genes.energyCap/2)
+    if self.energyLeft > cost:
+      id = str(uuid.uuid4().hex)
+      genes = mutateGenome(self.genes)
+      coords = self.rect.center
+      child = Creature(id=id, genes=genes, coords=coords)
+      creatures.append(child)
+      self.energyLeft -= cost
+      self.energyLeft = min(0, self.energyLeft)
+      self.babiesMade += 1
+    return creatures
 
   # returns fitness function of the 
   def getFitness(self):
     # let this be the fitness function for now
-    return 0.5 * self.energyConsumed + 0.2
+    return 0.85 * self.energyConsumed + 0.1 * self.babiesMade +  0.005 * self.age
 
   def draw(self, surface: pygame.Surface):
     w, h = self.body.get_size()
 
-    pygame.draw.ellipse(
-      self.body, 
-      self.color,
-      self.body.get_rect()
-    )
+    try:
+      pygame.draw.ellipse(
+        surface=self.body, 
+        color=self.color,
+        rect=self.body.get_rect()
+      )
+    except:
+      print(self.color)
+      exit()
 
     pygame.draw.ellipse(
       self.body, 
       self.genecolor,
       self.body.get_rect(),
-      width=5
+      width=2
     )
 
     self.creatureSensorRadius = pygame.draw.circle(
       surface=surface, 
       color=pygame.Color(255,255,255), 
-      center=self.bodyRectWorld.center,
+      center=self.rect.center,
       radius=self.body.get_width() * SENSOR_RANGE,
       width=1,
     )
@@ -336,19 +361,19 @@ class Creature(pygame.sprite.Sprite):
     blitRotate(
       surface, 
       self.image, 
-      self.bodyRectWorld.center,
+      self.rect.center,
       self.bodyRectImage.center,
       self.angle
     )
 
-    # pygame.draw.rect(surface=surface, rect=self.bodyRectWorld, color=(0,255,255), width=1)
-    self.rect = pygame.draw.lines(
-      surface=surface, 
-      color=(0, 0, 0), 
-      closed=True, 
-      points=[self.bodyRectWorldp0, self.bodyRectWorldp1, self.bodyRectWorldp2, self.bodyRectWorldp3], 
-      width=1
-    )
+    # pygame.draw.rect(surface=surface, rect=self.rect, color=(0,255,255), width=1)
+    # self.rect = pygame.draw.lines(
+    #   surface=surface, 
+    #   color=(0, 0, 0), 
+    #   closed=True, 
+    #   points=[self.rectp0, self.rectp1, self.rectp2, self.rectp3], 
+    #   width=1
+    # )
 
     
     self.leftAntenna = pygame.draw.line(
@@ -386,13 +411,13 @@ class Creature(pygame.sprite.Sprite):
     # self.velLine = pygame.draw.line(
     #   surface=surface,
     #   color=pygame.Color(0,255,0),
-    #   start_pos=self.bodyRectWorld.center,
-    #   end_pos=np.array(self.bodyRectWorld.center) + 10 * self.vel,
+    #   start_pos=self.rect.center,
+    #   end_pos=np.array(self.rect.center) + 10 * self.vel,
     #   width = 2
     # )
 
-    barStart = pygame.math.Vector2(self.bodyRectWorld.bottomright) + pygame.math.Vector2(5, 0)
-    barEnd = pygame.math.Vector2(self.bodyRectWorld.bottomright) \
+    barStart = pygame.math.Vector2(self.rect.bottomright) + pygame.math.Vector2(5, 0)
+    barEnd = pygame.math.Vector2(self.rect.bottomright) \
       - pygame.math.Vector2(-5, MAX_CREATURE_SIZE)
 
     energyLength = (self.energyLeft/self.genes.energyCap) * (barStart - barEnd)
