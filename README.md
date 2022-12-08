@@ -6,7 +6,7 @@ Edit constants in `config.py`
 ### Run
 `python3 renderer.py`
 
-![screen](./imgs/alife.mp4)
+https://user-images.githubusercontent.com/49330057/206451231-130c9e0a-e654-4da1-aed7-58bc2bc2df69.mp4
 
 
 ### TODO:
