@@ -62,27 +62,32 @@ class World(object):
       )
       newBrain = Brain().to(device=self.device)
 
-      genes = Genome(
+      randomGenes = Genome(
         random.randint(1, 255), 
         random.randint(1, 255), 
         random.randint(1, 255), 
         newBrain.state_dict()
       )
+      genes = randomGenes
       # mutate existing high fitness genes instead of randomly generating genes
       if(self.creatureGen >= NUM_CREATURES):
         for c in self.creatureList:
           if c.getFitness() > self.maxFitness:
             self.maxFitness = c.getFitness()
             self.bestGenome = c.genes
-        genes = mutateGenome(self.bestGenome)
+
+        genes = self.bestGenome
+        if random.random() < 0.3:
+          genes = randomGenes
 
       id = str(uuid.uuid4().hex)
       self.creatureList.append(Creature(genes=genes, coords=coords, id=id))
       self.creatureGen += 1
     
-    for c in self.creatureList:
+    oldCreatures = self.creatureList
+    for c in oldCreatures:
       if (self.borders.contains(c.rect) and c.energyLeft >= c.energyLossRate):
-        self.creatureList, self.foodList = c.update(self.creatureList, self.foodList, self.borders)
+        self.creatureList, self.foodList = c.update(oldCreatures, self.foodList, self.borders)
       else: 
         self.creatureList.remove(c)
 

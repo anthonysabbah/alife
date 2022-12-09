@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import pygame
-import pygame_gui
+# import pygame_gui
 import random
 from world import World
 from creature import Creature
@@ -9,15 +9,15 @@ from config import *
 
 pygame.init()
 
-WINDOWSIZE = (1000, 1000)
+WINDOWSIZE = (640, 640)
 
 pygame.display.set_caption('aybio')
-window_surface = pygame.display.set_mode(WINDOWSIZE, pygame.RESIZABLE)
+window_surface = pygame.display.set_mode(WINDOWSIZE, pygame.RESIZABLE | pygame.DOUBLEBUF)
 
 background = pygame.Surface(WORLDSIZE)
 # background.fill(pygame.Color('#4cd645'))
 
-manager = pygame_gui.UIManager(WINDOWSIZE)
+# manager = pygame_gui.UIManager(WINDOWSIZE)
 # hello_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((350, 275), (100, 50)),
 #                                             text='Say Hello',
 #                                             manager=manager)
@@ -25,18 +25,24 @@ manager = pygame_gui.UIManager(WINDOWSIZE)
 clock = pygame.time.Clock()
 is_running = True
 
-world = World(borderDims=WINDOWSIZE)
+world = World(borderDims=WORLDSIZE)
+MAX_FPS=240
 
+
+
+font = pygame.font.Font('freesansbold.ttf', 16)
+updateWindow = True
+ticksPassed = 0
 while is_running:
-  time_delta = clock.tick(60)/1000.0
+  time_delta = clock.tick(MAX_FPS)/1000.0
   for event in pygame.event.get():
     if event.type == pygame.QUIT:
       is_running = False
 
     elif event.type == pygame.VIDEORESIZE:
       WINDOWSIZE = (event.w,event.h)
-      window_surface = pygame.display.set_mode(WINDOWSIZE,pygame.RESIZABLE)
-      manager.set_window_resolution(WINDOWSIZE)
+      window_surface = pygame.display.set_mode(WINDOWSIZE,pygame.RESIZABLE | pygame.DOUBLEBUF)
+      # manager.set_window_resolution(WINDOWSIZE)
 
     elif event.type == pygame.MOUSEBUTTONDOWN:
       button1 = pygame.mouse.get_pressed(num_buttons=3)[0]
@@ -54,11 +60,12 @@ while is_running:
             print(c.energyLeft)
             print(c.getFitness())
 
-    manager.process_events(event)
-
+    elif event.type == pygame.KEYDOWN:
+      if event.key == pygame.K_q:
+        updateWindow = not(updateWindow)
 
   offscreen_surface = pygame.Surface(WORLDSIZE)
-  manager.update(time_delta)
+  # manager.update(time_delta)
 
   offscreen_surface.blit(background, (0, 0))
 
@@ -72,21 +79,27 @@ while is_running:
 
   ### 
 
-  offscreen_surface = pygame.transform.scale(offscreen_surface, WINDOWSIZE)
+  if updateWindow:
+    offscreen_surface = pygame.transform.scale(offscreen_surface, WINDOWSIZE)
 
-  window_surface.blit(offscreen_surface, (0,0))
+    window_surface.blit(offscreen_surface, (0,0))
 
-  font = pygame.font.Font('freesansbold.ttf', 16)
-  numText = font.render(f'Produced: {world.creatureGen}', True, (125,255,125), (0,0,125))
-  fitText = font.render(f'Max. Fit: {world.maxFitness}', True, (125,255,125), (0,0,125))
-  numTextRect = numText.get_rect()
-  numTextRect.topleft = (0,0)
-  fitTextRect = fitText.get_rect()
-  fitTextRect.topleft = numTextRect.bottomleft
-  window_surface.blit(numText, numTextRect)
-  window_surface.blit(fitText, fitTextRect)
+    numText = font.render(f'Produced: {world.creatureGen}', True, (125,255,125), (0,0,125))
+    fitText = font.render(f'Max. Fit: {world.maxFitness}', True, (125,255,125), (0,0,125))
+    numTextRect = numText.get_rect()
+    numTextRect.topleft = (0,0)
+    fitTextRect = fitText.get_rect()
+    fitTextRect.topleft = numTextRect.bottomleft
+    window_surface.blit(numText, numTextRect)
+    window_surface.blit(fitText, fitTextRect)
 
 
-  manager.draw_ui(window_surface)
+  # manager.draw_ui(window_surface)
 
-  pygame.display.update()
+    pygame.display.flip()
+
+  if ticksPassed % 1200 == 0:
+    fps = str(int(clock.get_fps()))
+    print(fps)
+  
+  ticksPassed += 1

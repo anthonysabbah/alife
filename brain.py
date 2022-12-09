@@ -24,21 +24,21 @@ class Brain(nn.Module):
     super().__init__()
     '''
     Inputs: [R_l, G_l, B_l, R_r, G_r, B_r, F, Energy, Angle, Cr]
-    Outputs: [Vec, dAngle, Brightness, Eat, Reproduce]
+    Outputs: [Vec, dAngle, Brightness, Eat, Attack, Reproduce]
     '''
 
-    self.lin0 = nn.Linear(2*3 + 4, 10, bias=False)
+    self.lin0 = nn.Linear(2*3 + 4, 20, bias=False)
     # torch.nn.init.uniform_(self.lin0.weight, 0, 1)
-    self.cancel0 = NegateLayer(shape=(10,))
+    self.cancel0 = NegateLayer(shape=(20,))
     self.relu0 = nn.ReLU()
-    self.lin1 = nn.Linear(10,5, bias=False)
-    # torch.nn.init.uniform_(self.lin0.weight, 0, 1)
+    self.lin1 = nn.Linear(20,6, bias=False)
+    # torch.nn.init.uniform_(self.lin1.weight, 0, 1)
 
   def forward(self, x):
     x = self.lin0(x)
     x = self.cancel0(x)
     x = self.relu0(x)
     x = self.lin1(x)
-    ones = torch.ones(len(x))
+    ones = torch.ones(x.size(dim=-1))
     logits = (x + ones)/(2 * ones)
     return logits

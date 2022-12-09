@@ -67,6 +67,14 @@ class Creature(pygame.sprite.Sprite):
     self.genes = genes
     self.age = 0
     self.babiesMade = 0
+    self.dmg = MIN_DMG + \
+    ((self.genes.size - MIN_CREATURE_SIZE)/ \
+    (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))* \
+    (MAX_DMG  - MIN_DMG)
+  
+    self.dmg_cost = MIN_DMG_COST + \
+      ((self.dmg - MIN_DMG)/(MAX_DMG-MIN_DMG))*\
+      (MAX_DMG_COST - MIN_DMG_COST)
 
     width = self.genes.size 
     if self.genes.size < MAX_CREATURE_VIEW_DIST:
@@ -83,28 +91,21 @@ class Creature(pygame.sprite.Sprite):
     (self.genes.size - MIN_CREATURE_SIZE)/ \
     (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
 
-    dims = (width, self.genes.size + MAX_CREATURE_VIEW_DIST)
+    # dims = (width, self.genes.size + MAX_CREATURE_VIEW_DIST)
 
-    self.image = pygame.Surface(dims)
+    # self.image = pygame.Surface(dims)
     self.body = pygame.Surface((self.genes.size,)*2)
     self.color = (255,0,0)
     # square view
 
     # rect of body surface in image surface coords
-    self.bodyRectImage = self.body.get_rect()
-    self.bodyRectImage.midbottom = (self.image.get_rect()).midbottom
     # TODO: add bodyRect world coords here later
     self.rect = self.body.get_rect()
     # self.rect.center = self.
 
     # transparent canvases
-    self.image.set_colorkey((0, 0, 0))
     self.body.set_colorkey((0, 0, 0))
-
-    self.imageWorldRect = self.image.get_rect()
-
     self.rect.center = coords
-    self.imageWorldRect.midbottom = self.rect.midbottom
 
     self.angle = 0
     # TODO: dont hard-code this
@@ -113,7 +114,6 @@ class Creature(pygame.sprite.Sprite):
     self.brain.eval()
 
     # to be initialized soon
-    self.mouthRect = None
     self.rectp0 = self.rect.topleft 
     self.rectp1 = self.rect.topright 
     self.rectp2 = self.rect.bottomright 
@@ -154,7 +154,7 @@ class Creature(pygame.sprite.Sprite):
     for item in objects:
       if self.leftAntennaRadius.contains(item.rect):
         d = pygame.Vector2(item.rect.center - self.leftAntennaEnd).magnitude()
-        r = self.leftAntennaRadius.width
+        r = self.leftAntennaRadius.width/2
         scaling = (r-d)/r
         leftAntennaDetections = np.append(
           leftAntennaDetections, 
@@ -164,7 +164,7 @@ class Creature(pygame.sprite.Sprite):
 
       if self.rightAntennaRadius.contains(item.rect):
         d = pygame.Vector2(item.rect.center - self.rightAntennaEnd).magnitude()
-        r = self.rightAntennaRadius.width
+        r = self.rightAntennaRadius.width/2
         scaling = (r-d)/r
         rightAntennaDetections = np.append(
           rightAntennaDetections, 
@@ -198,7 +198,7 @@ class Creature(pygame.sprite.Sprite):
 
     worldCenter = worldBorder.center
 
-    worldBorderColor = np.array([0,255,255])
+    worldBorderColor = np.array([0,255,0])
 
     leftVec = np.array(worldCenter) - np.array(self.leftAntennaEnd)
     rightVec = np.array(worldCenter) - np.array(self.rightAntennaEnd)
@@ -227,7 +227,11 @@ class Creature(pygame.sprite.Sprite):
     if outs[3] > 0.5:
       foods = self.eat(foods)
 
-    if outs[4] > 0.9:
+    if outs[4] > 0.5:
+      pass
+      # creatures = self.attack(creatures)
+
+    if outs[5] > 0.5:
       creatures = self.reproduce(creatures)
 
     vecOffset = (np.array(self.rectp1) - np.array(self.rectp0))/2
@@ -242,7 +246,7 @@ class Creature(pygame.sprite.Sprite):
     self.move(self.vel[0], self.vel[1])
     self.rotate(dTheta)
     # TODO: this is hacky, fix later plz
-    self.color = (255, min(int(outs[2] * 255), 255), min(int(outs[2] * 255), 255))
+    # self.color = (255, min(int(outs[2] * 255), 255), min(int(outs[2] * 255), 255))
     # print("color: ", self.color)
 
     self.age += 1
@@ -297,45 +301,62 @@ class Creature(pygame.sprite.Sprite):
         self.energyConsumed += foods[i].energyLeft
         foods.pop(i)
       i += 1
-
     return foods
+
+  def attack(self, creatures):
+    i = 0
+    while i < len(creatures):
+      #TODO: can only eat a single piece in one go for now
+      if self.rect.colliderect(creatures[i].rect):
+        gained = min(creatures[i].energyLeft, self.dmg)
+        self.energyLeft +=  gained
+        self.energyLeft -=  self.dmg_cost
+        creatures[i].energyLeft -= self.dmg
+        if self.energyLeft > self.genes.energyCap:
+          self.energyLeft = self.genes.energyCap
+        self.energyConsumed += gained
+          # foods.pop(i)
+      i += 1
+
+    return creatures
 
   def reproduce(self, creatures):
     cost = int(self.genes.energyCap/2)
     if self.energyLeft > cost:
       id = str(uuid.uuid4().hex)
       genes = mutateGenome(self.genes)
-      coords = self.rect.center
+      mag = np.linalg.norm(self.vel)
+      coords = np.array(self.rect.center) - ((self.vel)/mag) * self.creatureSensorRadius.width/4
       child = Creature(id=id, genes=genes, coords=coords)
       creatures.append(child)
       self.energyLeft -= cost
-      self.energyLeft = min(0, self.energyLeft)
+      self.energyLeft = min(0, abs(self.energyLeft))
       self.babiesMade += 1
     return creatures
 
   # returns fitness function of the 
   def getFitness(self):
     # let this be the fitness function for now
-    return 0.85 * self.energyConsumed + 0.1 * self.babiesMade +  0.005 * self.age
+    return 0.2 * self.age + 0.01 * self.babiesMade
 
   def draw(self, surface: pygame.Surface):
     w, h = self.body.get_size()
 
     try:
       pygame.draw.ellipse(
-        surface=self.body, 
+        surface=surface, 
         color=self.color,
-        rect=self.body.get_rect()
+        rect=self.rect
       )
     except:
       print(self.color)
       exit()
 
     pygame.draw.ellipse(
-      self.body, 
+      surface, 
       self.genecolor,
-      self.body.get_rect(),
-      width=2
+      self.rect,
+      width=5
     )
 
     self.creatureSensorRadius = pygame.draw.circle(
@@ -346,25 +367,16 @@ class Creature(pygame.sprite.Sprite):
       width=1,
     )
 
-    self.mouthRectWorld = pygame.draw.line(
-      self.body,
-      (0,0,0,0),
-      (int(w/2), int(h/2)),
-      (int(w/2), 0),
-      width = int(w/5)
-    )
 
-    # self.mouthRect.midbottom = self.bodyRect.center
+    # self.image.blit(self.body, self.bodyRectImage)
 
-    self.image.blit(self.body, self.bodyRectImage)
-
-    blitRotate(
-      surface, 
-      self.image, 
-      self.rect.center,
-      self.bodyRectImage.center,
-      self.angle
-    )
+    # blitRotate(
+    #   surface, 
+    #   self.image, 
+    #   self.rect.center,
+    #   self.bodyRectImage.center,
+    #   self.angle
+    # )
 
     # pygame.draw.rect(surface=surface, rect=self.rect, color=(0,255,255), width=1)
     # self.rect = pygame.draw.lines(
@@ -381,7 +393,7 @@ class Creature(pygame.sprite.Sprite):
       color=(255,255,255),
       start_pos=self.leftAntennaStart,
       end_pos=self.leftAntennaEnd,
-      width=1
+      width=3
     )
 
     self.rightAntenna = pygame.draw.line(
@@ -389,7 +401,7 @@ class Creature(pygame.sprite.Sprite):
       color=(255,255,255),
       start_pos=self.rightAntennaStart,
       end_pos=self.rightAntennaEnd,
-      width=1
+      width=3
     )
     
     self.leftAntennaRadius = pygame.draw.circle(
@@ -397,7 +409,7 @@ class Creature(pygame.sprite.Sprite):
       color=pygame.Color(255,255,255), 
       center=self.leftAntennaEnd,
       radius=self.body.get_width() * ANTENNA_RANGE_SCALER,
-      width=1,
+      width=2,
     )
 
     self.rightAntennaRadius = pygame.draw.circle(
@@ -405,7 +417,7 @@ class Creature(pygame.sprite.Sprite):
       color=pygame.Color(255,255,255), 
       center=self.rightAntennaEnd,
       radius=self.body.get_width() * ANTENNA_RANGE_SCALER,
-      width=1,
+      width=2,
     )
 
     # self.velLine = pygame.draw.line(

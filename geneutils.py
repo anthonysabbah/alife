@@ -50,21 +50,21 @@ def mutateGenome(g: Genome) -> Genome:
 
     connections = g.neuronalConnections
     cancel0 = connections['cancel0.drop']
-    # lin0w = connections['lin0.weight']
-    # lin1w = connections['lin1.weight']
+    lin0w = connections['lin0.weight']
+    lin1w = connections['lin1.weight']
 
     for i in range(len(cancel0)):
       cancel0[i] = int(not(cancel0[i])) if random.random() < m else cancel0[i]
 
-    # for i in range(len(lin0w)):
-    #   lin0w[i] = random.random()
+    for i in range(len(lin0w)):
+      lin0w[i] = random.random()
 
-    # for i in range(len(lin1w)):
-    #   lin1w[i] = random.random()
+    for i in range(len(lin1w)):
+      lin1w[i] = random.random()
 
     connections['cancel0.drop'] = cancel0
-    # connections['lin0.weight'] = lin0w
-    # connections['lin1.weight'] = lin1w
+    connections['lin0.weight'] = lin0w
+    connections['lin1.weight'] = lin1w
 
     return Genome(size, mutationRate, energyCap, connections)
   return g
