@@ -39,6 +39,8 @@ class Brain(nn.Module):
     x = self.cancel0(x)
     x = self.relu0(x)
     x = self.lin1(x)
-    ones = torch.ones(x.size(dim=-1))
-    logits = (x + ones)/(2 * ones)
+    logits = torch.sigmoid(x)
+    # logits = torch.clamp(x, 0, 1)
+    # ones = torch.ones(x.size(dim=-1))
+    # logits = (x + ones)/(2 * ones)
     return logits

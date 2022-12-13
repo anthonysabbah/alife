@@ -2,7 +2,7 @@ from config import *
 import pickle
 from brain import Brain
 import torch
-import random
+import numpy as np
 
 class Genome(object):
   # input params are all within [1, 255]
@@ -33,20 +33,20 @@ class Genome(object):
 
 def mutateGenome(g: Genome) -> Genome:
   #TODO: is this good?
-  if random.random() < g.mutationRate:
+  if np.random.rand() < g.mutationRate:
     m = g.mutationRate
     size = g.size
     mutationRate = g.mutationRate
     connections = g.neuronalConnections
     energyCap = g.energyCap
-    if(random.random() < m):
+    if(np.random.rand() < m):
       # mutate size and energy cap accordingly
-      size = 255 * random.random()
-      energyCap = 255 * random.random()
+      size = 255 * np.random.rand()
+      energyCap = 255 * np.random.rand()
 
-    if(random.random() < m):
+    if(np.random.rand() < m):
       # mutate mutation rate - omegalol
-      mutationRate = 255 * random.random()
+      mutationRate = 255 * np.random.rand()
 
     connections = g.neuronalConnections
     cancel0 = connections['cancel0.drop']
@@ -54,13 +54,13 @@ def mutateGenome(g: Genome) -> Genome:
     lin1w = connections['lin1.weight']
 
     for i in range(len(cancel0)):
-      cancel0[i] = int(not(cancel0[i])) if random.random() < m else cancel0[i]
+      cancel0[i] = int(not(cancel0[i])) if np.random.rand() < m else cancel0[i]
 
     for i in range(len(lin0w)):
-      lin0w[i] = random.random()
+      lin0w[i] = np.random.uniform(-1,1) if np.random.rand() < m else lin0w[i]
 
     for i in range(len(lin1w)):
-      lin1w[i] = random.random()
+      lin1w[i] = np.random.uniform(-1,1) if np.random.rand() < m else lin1w[i]
 
     connections['cancel0.drop'] = cancel0
     connections['lin0.weight'] = lin0w

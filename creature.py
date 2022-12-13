@@ -4,56 +4,13 @@ import torch
 import numpy as np
 import pygame
 from pygame.locals import *
-import random
 import hashlib
 import uuid
 
 from geneutils import Genome, mutateGenome
 from brain import Brain
 from food import Food
-import cv2
 from config import *
-import time
-
-def blitRotate(surf, image, pos, originPos, angle):
-
-    # offset from pivot to center
-    image_rect = image.get_rect(topleft = (pos[0] - originPos[0], pos[1]-originPos[1]))
-    offset_center_to_pivot = pygame.math.Vector2(pos) - image_rect.center
-    
-    # roatated offset from pivot to center
-    rotated_offset = offset_center_to_pivot.rotate(-angle)
-
-    # roatetd image center
-    rotated_image_center = (pos[0] - rotated_offset.x, pos[1] - rotated_offset.y)
-
-    # get a rotated image
-    rotated_image = pygame.transform.rotate(image, angle)
-    rotated_image_rect = rotated_image.get_rect(center = rotated_image_center)
-
-    # rotate and blit the image
-    surf.blit(rotated_image, rotated_image_rect)
-  
-    # draw rectangle around the image
-    # pygame.draw.rect(surf, (255, 0, 0), (*rotated_image_rect.topleft, *rotated_image.get_size()),2)
-
-def blitRotate2(surf, image, topleft, angle):
-
-    rotated_image = pygame.transform.rotate(image, angle)
-    new_rect = rotated_image.get_rect(center = image.get_rect(topleft = topleft).center)
-
-    surf.blit(rotated_image, new_rect.topleft)
-    # pygame.draw.rect(surf, (255, 0, 0), new_rect, 2)
-
-def rot_center(image, angle):
-  """rotate an image while keeping its center and size"""
-  orig_rect = image.get_rect()
-  rot_image = pygame.transform.rotate(image, angle)
-  rot_rect = orig_rect.copy()
-  rot_rect.center = rot_image.get_rect().center
-  rot_image = rot_image.subsurface(rot_rect).copy()
-  return rot_image
-
 
 class Creature(pygame.sprite.Sprite):
   def __init__(
@@ -75,6 +32,11 @@ class Creature(pygame.sprite.Sprite):
     self.dmg_cost = MIN_DMG_COST + \
       ((self.dmg - MIN_DMG)/(MAX_DMG-MIN_DMG))*\
       (MAX_DMG_COST - MIN_DMG_COST)
+    
+    self.birthCost = MIN_BIRTH_COST + \
+    ((self.genes.size - MIN_CREATURE_SIZE)/ \
+    (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))* \
+    (MAX_BIRTH_COST  - MIN_BIRTH_COST)
 
     width = self.genes.size 
     if self.genes.size < MAX_CREATURE_VIEW_DIST:
@@ -228,11 +190,12 @@ class Creature(pygame.sprite.Sprite):
       foods = self.eat(foods)
 
     if outs[4] > 0.5:
-      pass
-      # creatures = self.attack(creatures)
+      creatures = self.attack(creatures)
 
     if outs[5] > 0.5:
-      creatures = self.reproduce(creatures)
+      child = self.reproduce()
+      if child:
+        creatures.append(child)
 
     vecOffset = (np.array(self.rectp1) - np.array(self.rectp0))/2
     top = np.array(self.rectp0) + vecOffset
@@ -246,7 +209,7 @@ class Creature(pygame.sprite.Sprite):
     self.move(self.vel[0], self.vel[1])
     self.rotate(dTheta)
     # TODO: this is hacky, fix later plz
-    # self.color = (255, min(int(outs[2] * 255), 255), min(int(outs[2] * 255), 255))
+    self.color = (int(outs[2] * 255), 0,0)
     # print("color: ", self.color)
 
     self.age += 1
@@ -320,21 +283,23 @@ class Creature(pygame.sprite.Sprite):
 
     return creatures
 
-  def reproduce(self, creatures):
-    cost = int(self.genes.energyCap/2)
-    if self.energyLeft > cost:
+  def reproduce(self):
+    # cost = self.birthCost 
+    cost = self.birthCost
+    child = None
+    if self.energyLeft > 1.5 * cost:
       id = str(uuid.uuid4().hex)
       genes = mutateGenome(self.genes)
       mag = np.linalg.norm(self.vel)
       coords = np.array(self.rect.center) - ((self.vel)/mag) * self.creatureSensorRadius.width/4
       child = Creature(id=id, genes=genes, coords=coords)
-      creatures.append(child)
       self.energyLeft -= cost
-      self.energyLeft = min(0, abs(self.energyLeft))
+      child.energyLeft = cost
+      self.energyLeft = max(0, self.energyLeft)
       self.babiesMade += 1
-    return creatures
+    return child 
 
-  # returns fitness function of the 
+  # returns fitness function of the creature
   def getFitness(self):
     # let this be the fitness function for now
     return 0.2 * self.age + 0.01 * self.babiesMade
@@ -368,26 +333,6 @@ class Creature(pygame.sprite.Sprite):
     )
 
 
-    # self.image.blit(self.body, self.bodyRectImage)
-
-    # blitRotate(
-    #   surface, 
-    #   self.image, 
-    #   self.rect.center,
-    #   self.bodyRectImage.center,
-    #   self.angle
-    # )
-
-    # pygame.draw.rect(surface=surface, rect=self.rect, color=(0,255,255), width=1)
-    # self.rect = pygame.draw.lines(
-    #   surface=surface, 
-    #   color=(0, 0, 0), 
-    #   closed=True, 
-    #   points=[self.rectp0, self.rectp1, self.rectp2, self.rectp3], 
-    #   width=1
-    # )
-
-    
     self.leftAntenna = pygame.draw.line(
       surface=surface,
       color=(255,255,255),

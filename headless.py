@@ -2,7 +2,7 @@
 
 import pygame
 # import pygame_gui
-import random
+import numpy as np
 from world import World
 from creature import Creature
 from config import *
@@ -60,8 +60,8 @@ while is_running:
 
   ### simulation logic here
   coords = (
-    random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
-    random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+    np.random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
+    np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
   )
 
   world.update(offscreen_surface)
@@ -83,7 +83,7 @@ while is_running:
   offscreen_surface.blit(fitText, fitTextRect)
 
   fps = str(int(clock.get_fps()))
-  if ticksPassed % 20 * 10 == 0:
+  if ticksPassed % 5 * 120 == 0:
     print(fps)
     pygame.image.save(offscreen_surface, 'static/rendered.jpg')
 

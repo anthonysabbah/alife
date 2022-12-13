@@ -45,9 +45,10 @@ class World(object):
   def growFood(self):
     if len(self.foodList) < MAX_FOOD and (int(self.foodToGive) > 0):
       coords = (
-        random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
-        random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+        np.random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
+        np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
       )
+
       self.foodList.append(Food(coords=coords, size=FOODSIZE))
       self.foodToGive -= self.foodToGive
 
@@ -57,17 +58,16 @@ class World(object):
   def updateCreatures(self):
     if len(self.creatureList) < NUM_CREATURES:
       coords = (
-        random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
-        random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+        np.random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
+        np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
       )
       newBrain = Brain().to(device=self.device)
 
       randomGenes = Genome(
-        random.randint(1, 255), 
-        random.randint(1, 255), 
-        random.randint(1, 255), 
+        *np.random.randint(1, 255, size=(3,)),
         newBrain.state_dict()
       )
+
       genes = randomGenes
       # mutate existing high fitness genes instead of randomly generating genes
       if(self.creatureGen >= NUM_CREATURES):
@@ -77,7 +77,7 @@ class World(object):
             self.bestGenome = c.genes
 
         genes = self.bestGenome
-        if random.random() < 0.3:
+        if np.random.random() < 0.3:
           genes = randomGenes
 
       id = str(uuid.uuid4().hex)
