@@ -185,7 +185,6 @@ class Creature(pygame.sprite.Sprite):
     # Outputs: [Vec, dAngle, Brightness, Eat]
     # print('outs: ', outs)
 
-    #TODO: eats food for now, but should be able to eat creatures as well
     if outs[3] > 0.5:
       foods = self.eat(foods)
 
