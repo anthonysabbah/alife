@@ -3,7 +3,6 @@ from OpenGL.arrays import vbo
 import pygame, sys
 from pygame.locals import *
 from config import *
-import random
 
 class Food(pygame.sprite.Sprite):
   """
@@ -12,7 +11,7 @@ class Food(pygame.sprite.Sprite):
   coords: tuple[x: int, y: int] - x and y coords of food (centered) in world space
   energy: 
   """
-  def __init__(self, size: tuple([int, int]), coords: tuple([int, int]), energy=300):
+  def __init__(self, coords, size=FOODSIZE, energy=FOOD_ENERGY):
     super().__init__()
     self.energyLeft = energy
     self.size = int(size[0]), int(size[1]) # in world coords, NOT WINDOW COORDS

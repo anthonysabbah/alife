@@ -1,0 +1,14 @@
+services:
+  worldDB:
+    image: redis/redis-stack-server
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+  genomeDB:
+    image: redis/redis-stack-server
+    ports:
+      - "6380:6379"
+  fitnessDB:
+    image: redis/redis-stack-server
+    ports:
+      - "6381:6379"

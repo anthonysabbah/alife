@@ -1,5 +1,3 @@
-from OpenGL import GLU # OpenGL Utility Library, extends OpenGL functionality
-from OpenGL.arrays import vbo
 import torch
 import numpy as np
 import pygame
@@ -20,6 +18,7 @@ class Creature(pygame.sprite.Sprite):
     coords: tuple([int, int]) = (0, 0),
     brain: Brain = Brain()
   ):
+    super().__init__()
     self.id=id
     self.genes = genes
     self.age = 0
@@ -37,13 +36,11 @@ class Creature(pygame.sprite.Sprite):
     ((self.genes.size - MIN_CREATURE_SIZE)/ \
     (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))* \
     (MAX_BIRTH_COST  - MIN_BIRTH_COST)
-
-    width = self.genes.size 
-    if self.genes.size < MAX_CREATURE_VIEW_DIST:
-      width = MAX_CREATURE_VIEW_DIST
     
+    # hash of genome
+    self.geneHash = (hashlib.sha256(self.genes.encode()).digest()).hex()
     # color representing genome
-    self.genecolor = '#' + (hashlib.sha256(self.genes.encode()).digest()).hex()[:6]
+    self.geneColor = '#' + self.geneHash[:6]
     
     self.energyLeft = self.genes.energyCap
     self.energyConsumed = 0
@@ -71,7 +68,7 @@ class Creature(pygame.sprite.Sprite):
 
     self.angle = 0
     # TODO: dont hard-code this
-    self.brain = Brain().to('cpu')
+    self.brain = Brain()
     self.brain.load_state_dict(self.genes.neuronalConnections)
     self.brain.eval()
 
@@ -95,6 +92,34 @@ class Creature(pygame.sprite.Sprite):
     self.creatureSensorRadius = pygame.Rect(self.rect)
     self.rect = self.rect
     self.vel = [0,0]
+    self.outs = np.zeros((6,))
+
+  def detectWithAntennae(self, item):
+    leftAntennaDetections = np.array([[0,0,0]])
+    rightAntennaDetections = np.array([[0,0,0]])
+
+    if self.leftAntennaRadius.contains(item.rect):
+      d = pygame.Vector2(item.rect.center - self.leftAntennaEnd).magnitude()
+      r = self.leftAntennaRadius.width/2
+      scaling = (r-d)/r
+      leftAntennaDetections = np.append(
+        leftAntennaDetections, 
+        np.dot(scaling, np.asarray(item.color).reshape(1,3)), 
+        axis=0
+      )
+
+    if self.rightAntennaRadius.contains(item.rect):
+      d = pygame.Vector2(item.rect.center - self.rightAntennaEnd).magnitude()
+      r = self.rightAntennaRadius.width/2
+      scaling = (r-d)/r
+      rightAntennaDetections = np.append(
+        rightAntennaDetections, 
+        np.dot(scaling, 
+        np.asarray(item.color).reshape(1,3)), 
+        axis=0
+      )
+
+    return leftAntennaDetections, rightAntennaDetections
 
     # self.viewCanvas = pygame.Surface((self.genes.size,)*2).convert_alpha()
     #TODO Make viewing distance dependent on genome?
@@ -108,33 +133,10 @@ class Creature(pygame.sprite.Sprite):
       return 
 
     objects = creatures + foods
-    leftAntennaDetections = np.array([[0,0,0]])
-    rightAntennaDetections = np.array([[0,0,0]])
     foodScalar = 0
     creatureScalar = 0
-
     for item in objects:
-      if self.leftAntennaRadius.contains(item.rect):
-        d = pygame.Vector2(item.rect.center - self.leftAntennaEnd).magnitude()
-        r = self.leftAntennaRadius.width/2
-        scaling = (r-d)/r
-        leftAntennaDetections = np.append(
-          leftAntennaDetections, 
-          np.dot(scaling, np.asarray(item.color).reshape(1,3)), 
-          axis=0
-        )
-
-      if self.rightAntennaRadius.contains(item.rect):
-        d = pygame.Vector2(item.rect.center - self.rightAntennaEnd).magnitude()
-        r = self.rightAntennaRadius.width/2
-        scaling = (r-d)/r
-        rightAntennaDetections = np.append(
-          rightAntennaDetections, 
-          np.dot(scaling, 
-          np.asarray(item.color).reshape(1,3)), 
-          axis=0
-        )
-        # print(rightAntennaDetections, 'R')
+      leftAntennaDetections, rightAntennaDetections = self.detectWithAntennae(item)
 
       foodNum = 0
       creatureNum = 0
@@ -179,19 +181,19 @@ class Creature(pygame.sprite.Sprite):
     inputs = np.append(inputs, creatureScalar)
     # inputs = np.append(inputs, np.random.random())
     inputs = torch.Tensor(inputs)
-    outs = self.brain(inputs).detach().numpy()
+    self.outs = self.brain(inputs).detach().numpy()
 
     # print('ins: ', inputs)
     # Outputs: [Vec, dAngle, Brightness, Eat]
-    # print('outs: ', outs)
+    # print('self.outs: ', self.outs)
 
-    if outs[3] > 0.5:
+    if self.outs[3] > 0.5:
       foods = self.eat(foods)
 
-    if outs[4] > 0.5:
+    if self.outs[4] > 0.5:
       creatures = self.attack(creatures)
 
-    if outs[5] > 0.5:
+    if self.outs[5] > 0.5:
       child = self.reproduce()
       if child:
         creatures.append(child)
@@ -200,15 +202,15 @@ class Creature(pygame.sprite.Sprite):
     top = np.array(self.rectp0) + vecOffset
     bottom = np.array(self.rectp3) + vecOffset
     dirVec = (top - bottom)/np.linalg.norm(top - bottom)
-    vel = MAX_SPEED * outs[0] * dirVec
+    vel = MAX_SPEED * self.outs[0] * dirVec
     # print("vel: ", vel)
     self.vel = np.asarray(vel, dtype=int)
-    dTheta = int(MAX_ANGLE_RATE * outs[1] * (-1 if outs[1] < 0.5 else 1))
+    dTheta = int(MAX_ANGLE_RATE * self.outs[1] * (-1 if self.outs[1] < 0.5 else 1))
 
     self.move(self.vel[0], self.vel[1])
     self.rotate(dTheta)
     # TODO: this is hacky, fix later plz
-    self.color = (int(outs[2] * 255), 0,0)
+    self.color = (int(self.outs[2] * 255), 0,0)
     # print("color: ", self.color)
 
     self.age += 1
@@ -318,7 +320,7 @@ class Creature(pygame.sprite.Sprite):
 
     pygame.draw.ellipse(
       surface, 
-      self.genecolor,
+      self.geneColor,
       self.rect,
       width=5
     )
@@ -364,14 +366,6 @@ class Creature(pygame.sprite.Sprite):
       width=2,
     )
 
-    # self.velLine = pygame.draw.line(
-    #   surface=surface,
-    #   color=pygame.Color(0,255,0),
-    #   start_pos=self.rect.center,
-    #   end_pos=np.array(self.rect.center) + 10 * self.vel,
-    #   width = 2
-    # )
-
     barStart = pygame.math.Vector2(self.rect.bottomright) + pygame.math.Vector2(5, 0)
     barEnd = pygame.math.Vector2(self.rect.bottomright) \
       - pygame.math.Vector2(-5, MAX_CREATURE_SIZE)
@@ -379,7 +373,7 @@ class Creature(pygame.sprite.Sprite):
     energyLength = (self.energyLeft/self.genes.energyCap) * (barStart - barEnd)
 
 
-    self.energyBar = pygame.draw.line(
+    self.energyBarBackground = pygame.draw.line(
       surface=surface,
       color=(255,255,255),
       start_pos=barStart,

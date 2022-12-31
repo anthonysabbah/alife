@@ -1,20 +1,14 @@
 import numpy as np
 import pygame
-import random
-import OpenGL.GL as gl
-import time
 import torch
-from OpenGL import GLU # OpenGL Utility Library, extends OpenGL functionality
-from OpenGL.arrays import vbo
 
 import uuid
 from food import Food
 from creature import Creature
-from geneutils import Genome, mutateGenome
+from geneutils import Genome
 from brain import Brain
 from config import * 
 
-random.seed(TORCH_SEED)
 torch.manual_seed(TORCH_SEED)
 np.random.seed(TORCH_SEED)
 
@@ -24,13 +18,14 @@ class World(object):
     self.foodList = foodList
     self.creatureList = creatureList
     self.foodPerTimestep = foodPerTimestep 
-    self.lastUpdateTime = time.time()
     self.borders = pygame.Rect(0, 0, borderDims[0], borderDims[1])
     self.creatureGen = 0
     self.maxFitness = -1
     self.foodToGive = foodPerTimestep
-    self.timePassed = 0
-    self.bestGenome = -1
+    self.tick = 0
+    self.bestGenome = None
+    self.torchRNGState = torch.get_rng_state()
+    self.npRNGState = np.random.get_state()
 
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {self.device} device")
@@ -40,7 +35,9 @@ class World(object):
       self.growFood()
       self.updateCreatures()
       self.drawAll(surface=surface)
-      self.timePassed += 1
+      self.torchRNGState = torch.get_rng_state()
+      self.npRNGState = np.random.get_state()
+      self.tick += 1
 
   def growFood(self):
     if len(self.foodList) < MAX_FOOD and (int(self.foodToGive) > 0):
@@ -49,7 +46,7 @@ class World(object):
         np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
       )
 
-      self.foodList.append(Food(coords=coords, size=FOODSIZE))
+      self.foodList.append(Food(coords=coords))
       self.foodToGive -= self.foodToGive
 
     self.foodToGive += self.foodPerTimestep
@@ -61,7 +58,7 @@ class World(object):
         np.random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
         np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
       )
-      newBrain = Brain().to(device=self.device)
+      newBrain = Brain()
 
       randomGenes = Genome(
         *np.random.randint(1, 255, size=(3,)),

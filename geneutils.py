@@ -2,6 +2,7 @@ from config import *
 import pickle
 from brain import Brain
 import torch
+from torch.distributions.uniform import Uniform
 import numpy as np
 
 class Genome(object):
@@ -29,7 +30,7 @@ class Genome(object):
       return True
 
     return False
-   
+
 
 def mutateGenome(g: Genome) -> Genome:
   #TODO: is this good?
@@ -48,13 +49,14 @@ def mutateGenome(g: Genome) -> Genome:
       # mutate mutation rate - omegalol
       mutationRate = 255 * np.random.rand()
 
+    # mutate brain
     connections = g.neuronalConnections
     cancel0 = connections['cancel0.drop']
     lin0w = connections['lin0.weight']
     lin1w = connections['lin1.weight']
 
-    for i in range(len(cancel0)):
-      cancel0[i] = int(not(cancel0[i])) if np.random.rand() < m else cancel0[i]
+    cancel0Prob = torch.rand(cancel0.size())
+    cancel0 = (cancel0Prob<m)
 
     for i in range(len(lin0w)):
       lin0w[i] = np.random.uniform(-1,1) if np.random.rand() < m else lin0w[i]
@@ -68,22 +70,3 @@ def mutateGenome(g: Genome) -> Genome:
 
     return Genome(size, mutationRate, energyCap, connections)
   return g
-
-# def reproduce(g0: Genome, g1: Genome) -> Genome:
-
-
-  # for weight in neuronalConnection:
-
-# test code
-# from brain import Brain
-# b = Brain()
-# weights = b.state_dict()
-# conn = {}
-# conn['cancel0.drop'] = weights['cancel0.drop']
-# conn['cancel1.drop'] = weights['cancel1.drop']
-# print(conn)
-
-# g = Genome(size=120, mutationRate=50, neuronalConnections=conn)
-# newG = mutateGenome(g)
-# print(newG.neuronalConnections)
-  

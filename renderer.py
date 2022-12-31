@@ -2,104 +2,98 @@
 
 import pygame
 # import pygame_gui
-import random
+import numpy as np
 from world import World
 from creature import Creature
 from config import *
 
-pygame.init()
+def main():
+  pygame.init()
 
-WINDOWSIZE = (640, 640)
+  WINDOWSIZE = (640, 640)
 
-pygame.display.set_caption('aybio')
-window_surface = pygame.display.set_mode(WINDOWSIZE, pygame.RESIZABLE | pygame.DOUBLEBUF)
+  pygame.display.set_caption('aybio')
+  window_surface = pygame.display.set_mode(WINDOWSIZE, pygame.RESIZABLE | pygame.DOUBLEBUF)
 
-background = pygame.Surface(WORLDSIZE)
-# background.fill(pygame.Color('#4cd645'))
+  background = pygame.Surface(WORLDSIZE)
+  clock = pygame.time.Clock()
+  is_running = True
 
-# manager = pygame_gui.UIManager(WINDOWSIZE)
-# hello_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((350, 275), (100, 50)),
-#                                             text='Say Hello',
-#                                             manager=manager)
+  world = World(borderDims=WORLDSIZE)
+  MAX_FPS=240
 
-clock = pygame.time.Clock()
-is_running = True
+  font = pygame.font.Font('freesansbold.ttf', 16)
+  updateWindow = False
+  ticksPassed = 0
+  while is_running:
+    time_delta = clock.tick(MAX_FPS)/1000.0
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+        is_running = False
 
-world = World(borderDims=WORLDSIZE)
-MAX_FPS=240
+      elif event.type == pygame.VIDEORESIZE:
+        WINDOWSIZE = (event.w,event.h)
+        window_surface = pygame.display.set_mode(WINDOWSIZE,pygame.RESIZABLE | pygame.DOUBLEBUF)
+        # manager.set_window_resolution(WINDOWSIZE)
 
+      elif event.type == pygame.MOUSEBUTTONDOWN:
+        button1 = pygame.mouse.get_pressed(num_buttons=3)[0]
+        if button1:
+          pos = list(pygame.mouse.get_pos())
+          widthScale = WORLDSIZE[0]/window_surface.get_width()
+          heightScale = WORLDSIZE[1]/window_surface.get_height()
+          pos[0] = pos[0] * widthScale
+          pos[1] = pos[1] * heightScale
+          for c in world.creatureList:
+            c: Creature
+            if c.rect.collidepoint(*pos):
+              print(c.genecolor)
+              print(c.age)
+              print(c.energyLeft)
+              print(c.getFitness())
 
+      elif event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_q:
+          updateWindow = not(updateWindow)
 
-font = pygame.font.Font('freesansbold.ttf', 16)
-updateWindow = True
-ticksPassed = 0
-while is_running:
-  time_delta = clock.tick(MAX_FPS)/1000.0
-  for event in pygame.event.get():
-    if event.type == pygame.QUIT:
-      is_running = False
+    offscreen_surface = pygame.Surface(WORLDSIZE)
+    # manager.update(time_delta)
 
-    elif event.type == pygame.VIDEORESIZE:
-      WINDOWSIZE = (event.w,event.h)
-      window_surface = pygame.display.set_mode(WINDOWSIZE,pygame.RESIZABLE | pygame.DOUBLEBUF)
-      # manager.set_window_resolution(WINDOWSIZE)
+    offscreen_surface.blit(background, (0, 0))
 
-    elif event.type == pygame.MOUSEBUTTONDOWN:
-      button1 = pygame.mouse.get_pressed(num_buttons=3)[0]
-      if button1:
-        pos = list(pygame.mouse.get_pos())
-        widthScale = WORLDSIZE[0]/window_surface.get_width()
-        heightScale = WORLDSIZE[1]/window_surface.get_height()
-        pos[0] = pos[0] * widthScale
-        pos[1] = pos[1] * heightScale
-        for c in world.creatureList:
-          c: Creature
-          if c.rect.collidepoint(*pos):
-            print(c.genecolor)
-            print(c.age)
-            print(c.energyLeft)
-            print(c.getFitness())
+    ### simulation logic here
+    coords = (
+      np.random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
+      np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+    )
 
-    elif event.type == pygame.KEYDOWN:
-      if event.key == pygame.K_q:
-        updateWindow = not(updateWindow)
+    world.update(offscreen_surface)
 
-  offscreen_surface = pygame.Surface(WORLDSIZE)
-  # manager.update(time_delta)
+    ### 
 
-  offscreen_surface.blit(background, (0, 0))
+    if updateWindow:
+      offscreen_surface = pygame.transform.scale(offscreen_surface, WINDOWSIZE)
 
-  ### simulation logic here
-  coords = (
-    random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
-    random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
-  )
+      window_surface.blit(offscreen_surface, (0,0))
 
-  world.update(offscreen_surface)
-
-  ### 
-
-  if updateWindow:
-    offscreen_surface = pygame.transform.scale(offscreen_surface, WINDOWSIZE)
-
-    window_surface.blit(offscreen_surface, (0,0))
-
-    numText = font.render(f'Produced: {world.creatureGen}', True, (125,255,125), (0,0,125))
-    fitText = font.render(f'Max. Fit: {world.maxFitness}', True, (125,255,125), (0,0,125))
-    numTextRect = numText.get_rect()
-    numTextRect.topleft = (0,0)
-    fitTextRect = fitText.get_rect()
-    fitTextRect.topleft = numTextRect.bottomleft
-    window_surface.blit(numText, numTextRect)
-    window_surface.blit(fitText, fitTextRect)
+      numText = font.render(f'Produced: {world.creatureGen}', True, (125,255,125), (0,0,125))
+      fitText = font.render(f'Max. Fit: {world.maxFitness}', True, (125,255,125), (0,0,125))
+      numTextRect = numText.get_rect()
+      numTextRect.topleft = (0,0)
+      fitTextRect = fitText.get_rect()
+      fitTextRect.topleft = numTextRect.bottomleft
+      window_surface.blit(numText, numTextRect)
+      window_surface.blit(fitText, fitTextRect)
 
 
-  # manager.draw_ui(window_surface)
+    # manager.draw_ui(window_surface)
 
-    pygame.display.flip()
+      pygame.display.flip()
 
-  if ticksPassed % 1200 == 0:
-    fps = str(int(clock.get_fps()))
-    print(fps)
-  
-  ticksPassed += 1
+    if ticksPassed % 240 == 0:
+      fps = str(int(clock.get_fps()))
+      print(fps)
+    
+    ticksPassed += 1
+
+main()
