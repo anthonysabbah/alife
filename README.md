@@ -4,8 +4,8 @@ the simulator itself which includes an extensive overview of creatures (genomes,
 ## Goals
 - Streamlined - Stay simple.
 - Speed - The simulator itself should be fast, and the chosen data store solution (redis) should be able to keep up with it at a reasonable rate. 
-  - Trying to hit 30FPS with `MIN_CREATURES=20` and `WORLDSIZE=(1500,1500)`
-   in headless mode. Currently it runs at ~17FPS.
+  - Trying to hit ~20FPS with `MIN_CREATURES=20`, `WORLDSIZE=(1500,1500)` and `DB_UPDATE_INC=1` on a Macbook Air M1 w/ 8GB RAM
+    - The simulator is primarily bottlenecked by world state serialization and writes to redis (takes ~50ms so 20FPS). May end up ditching redis for sqlite3 due to networking overhead introduced by redis.
 ## Configuration
 Edit simulator constants in [config.py](./config.py)\
 Wouldn't recommend touching [docker-compose.yaml](./docker-compose.yaml) or anything
@@ -15,20 +15,25 @@ docker related for now.
 ```
 pip install requirements.txt
 ```
-### Standalone
+### Standalone - no persistance
 ```
 python3 renderer.py
 ```
-### With Redis (**WIP**) - basically has no data persistance
+### With Redis (**WIP**) - persistance now working
 ```
 docker compose up -d
 python3 redis_renderer.py
 ```
-### Simulator Keybinds
+Relevant redis configs and database snapshots are located under `redis-stuff` for
+each respective redis docker instance.
+### Simulator Keybinds (not in headless mode)
 - `q` - toggles headless mode (no window draw updates)
 - `p`  - pauses the simulator 
 
-Here's a short clip:
+### REST API:
+
+
+Here's a short clip: \
 https://user-images.githubusercontent.com/49330057/206451231-130c9e0a-e654-4da1-aed7-58bc2bc2df69.mp4
 
 

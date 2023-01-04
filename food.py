@@ -1,5 +1,3 @@
-from OpenGL import GLU # OpenGL Utility Library, extends OpenGL functionality
-from OpenGL.arrays import vbo
 import pygame, sys
 from pygame.locals import *
 from config import *

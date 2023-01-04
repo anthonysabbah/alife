@@ -4,3 +4,4 @@ torchaudio
 orjson
 redis
 pygame
+flask

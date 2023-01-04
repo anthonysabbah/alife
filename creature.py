@@ -215,6 +215,7 @@ class Creature(pygame.sprite.Sprite):
 
     self.age += 1
 
+    self.fitness = self.getFitness()
     return creatures, foods
 
   def move(self, dx, dy):

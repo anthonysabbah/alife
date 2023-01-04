@@ -17,7 +17,7 @@ def main():
 
   background = pygame.Surface(WORLDSIZE)
   clock = pygame.time.Clock()
-  is_running = True
+  is_running = 1
 
   world = World(borderDims=WORLDSIZE)
   MAX_FPS=240
@@ -29,7 +29,7 @@ def main():
     time_delta = clock.tick(MAX_FPS)/1000.0
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
-        is_running = False
+        is_running = 0
 
       elif event.type == pygame.VIDEORESIZE:
         WINDOWSIZE = (event.w,event.h)
