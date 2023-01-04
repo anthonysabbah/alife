@@ -5,3 +5,4 @@ node_modules
 yarn.lock
 memaddrs.txt
 junk/
+redis-stuff/*/dump.rdb
