@@ -182,11 +182,17 @@ class Simulator(object):
   def main(self):
 
     # move this to config
-    MAX_FPS=240
     is_running = True
 
     font = pygame.font.Font('freesansbold.ttf', 16)
-    updateWindow = False
+    updateWindow = True
+
+    try:
+      if os.environ['ALIFE_HEADLESS'] == "1":
+        updateWindow = False
+    except:
+      pass
+
     while is_running:
       # time_delta = clock.tick(MAX_FPS)/1000.0
       start = time.time()

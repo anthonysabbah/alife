@@ -26,6 +26,9 @@ python3 redis_renderer.py
 ```
 Relevant redis configs and database snapshots are located under `redis-stuff` for
 each respective redis docker instance.
+### Extras
+- Run with env. var `ALIFE_HEADLESS=1` to trick sdl into using a dummy display driver - can be used to 
+run on machines without a display.
 ### Simulator Keybinds (not in headless mode)
 - `q` - toggles headless mode (no window draw updates)
 - `p`  - pauses the simulator 
@@ -33,7 +36,7 @@ each respective redis docker instance.
 ### REST API:
 
 
-Here's a short clip: \
+Here's a short clip of it running: \
 https://user-images.githubusercontent.com/49330057/206451231-130c9e0a-e654-4da1-aed7-58bc2bc2df69.mp4
 
 
