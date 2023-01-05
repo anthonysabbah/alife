@@ -1,23 +1,22 @@
-from config import *
 import pickle
-from brain import Brain
 import torch
-from torch.distributions.uniform import Uniform
 import numpy as np
+from config import CONFIG
 
 class Genome(object):
   # input params are all within [1, 255]
   def __init__(self, size: int, energyCap: int, mutationRate: int, neuronalConnections):
-    self.size =  int(MIN_CREATURE_SIZE + (size/255) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))
+    self.size =  int(CONFIG['MIN_CREATURE_SIZE'] + \
+      (size/255) * (CONFIG['MAX_CREATURE_SIZE'] - CONFIG['MIN_CREATURE_SIZE']))
 
-    self.energyCap = MIN_ENERGY_CAP + (self.size - MIN_CREATURE_SIZE) * \
-    (MAX_ENERGY_CAP - MIN_ENERGY_CAP) / (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
+    self.energyCap = CONFIG['MIN_ENERGY_CAP'] + (self.size - CONFIG['MIN_CREATURE_SIZE']) * \
+    (CONFIG['MAX_ENERGY_CAP'] - CONFIG['MIN_ENERGY_CAP']) / (CONFIG['MAX_CREATURE_SIZE'] - CONFIG['MIN_CREATURE_SIZE'])
 
-    self.mutationRate =  MIN_MUTATION_RATE + (size/255) * (MAX_MUTATION_RATE - MIN_MUTATION_RATE)
+    self.mutationRate =  CONFIG['MIN_MUTATION_RATE'] + (size/255) * (CONFIG['MAX_MUTATION_RATE'] - CONFIG['MIN_MUTATION_RATE'])
     self.neuronalConnections = neuronalConnections  # pytorch model state_dict
 
   def encode(self):
-    return pickle.dumps(self)
+    return pickle.dumps(self.__dict__)
 
   def __eq__(self, __o: object) -> bool:
     if isinstance(__o, Genome):

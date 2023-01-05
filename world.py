@@ -7,14 +7,14 @@ from food import Food
 from creature import Creature
 from geneutils import Genome
 from brain import Brain
-from config import * 
+from config import CONFIG
 
-torch.manual_seed(TORCH_SEED)
-np.random.seed(TORCH_SEED)
 
 class World(object):
   def __init__(self, borderDims=list([int, int]), foodList=[], creatureList=[], foodPerTimestep: int = 0.5):
     # self.entities = []
+    torch.manual_seed(CONFIG['TORCH_SEED'])
+    np.random.seed(CONFIG['TORCH_SEED'])
     self.foodList = foodList
     self.creatureList = creatureList
     self.foodPerTimestep = foodPerTimestep 
@@ -40,26 +40,26 @@ class World(object):
       self.tick += 1
 
   def growFood(self):
-    if len(self.foodList) < MAX_FOOD and (int(self.foodToGive) > 0):
+    if len(self.foodList) < CONFIG['MAX_FOOD'] and (int(self.foodToGive) > 0):
       coords = (
-        np.random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
-        np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+        np.random.randint(CONFIG['FOODSIZE'][0], CONFIG['WORLDSIZE'][0] - CONFIG['FOODSIZE'][0]), 
+        np.random.randint(CONFIG['FOODSIZE'][1], CONFIG['WORLDSIZE'][1] - CONFIG['FOODSIZE'][1]), 
       )
 
       self.foodList.append(Food(coords=coords))
       self.foodToGive -= self.foodToGive
 
     self.foodToGive += self.foodPerTimestep
-    self.foodToGive = min(MAX_FOOD, self.foodToGive)
+    self.foodToGive = min(CONFIG['MAX_FOOD'], self.foodToGive)
 
   def updateCreatures(self):
-    if len(self.creatureList) < NUM_CREATURES:
+    if len(self.creatureList) < CONFIG['NUM_CREATURES']:
       coords = (
-        np.random.randint(FOODSIZE[0], WORLDSIZE[0] - FOODSIZE[0]), 
-        np.random.randint(FOODSIZE[1], WORLDSIZE[1] - FOODSIZE[1])
+        np.random.randint(CONFIG['FOODSIZE'][0], CONFIG['WORLDSIZE'][0] - CONFIG['FOODSIZE'][0]), 
+        np.random.randint(CONFIG['FOODSIZE'][1], CONFIG['WORLDSIZE'][1] - CONFIG['FOODSIZE'][1]), 
       )
-      newBrain = Brain()
 
+      newBrain = Brain()
       randomGenes = Genome(
         *np.random.randint(1, 255, size=(3,)),
         newBrain.state_dict()
@@ -67,7 +67,7 @@ class World(object):
 
       genes = randomGenes
       # mutate existing high fitness genes instead of randomly generating genes
-      if(self.creatureGen >= NUM_CREATURES):
+      if(self.creatureGen >= CONFIG['NUM_CREATURES']):
         for c in self.creatureList:
           if c.getFitness() > self.maxFitness:
             self.maxFitness = c.getFitness()

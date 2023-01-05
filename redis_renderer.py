@@ -24,16 +24,19 @@ from food import Food
 from geneutils import Genome
 from brain import Brain
 from creature import Creature
-from config import *
+from config import CONFIG
 from serialization import customEncoder
 from multiprocessing import shared_memory
 
 class Simulator(object):
 # intialize redis connections
   def __init__(self):
-    self.world = World(borderDims=WORLDSIZE)
+    self.config = CONFIG
+    self.world = World(borderDims=self.config['WORLDSIZE'])
     self.r = redis.Redis()
     self.genomeDB = self.r.from_url('redis://localhost:6380/0')
+    if not self.r.exists('CONFIG'):
+      self.r.json().set('CONFIG', '$', self.config)
 
     pygame.init()
 
@@ -42,7 +45,7 @@ class Simulator(object):
     pygame.display.set_caption('aybio')
     self.window_surface = pygame.display.set_mode(self.WINDOWSIZE, pygame.RESIZABLE | pygame.DOUBLEBUF)
 
-    self.background = pygame.Surface(WORLDSIZE)
+    self.background = pygame.Surface(self.config['WORLDSIZE'])
 
     self.clock = pygame.time.Clock()
 
@@ -78,11 +81,18 @@ class Simulator(object):
   
   #TODO: use multiprocessing on some loading operations for speedup
   def loadWorld(self):
+
+    self.config = self.r.json().get('CONFIG')
+    confFile = open('config.json', 'w+')
+    dumpConf = orjson.dumps(self.config, option=orjson.OPT_INDENT_2).decode('utf8')
+    confFile.write(dumpConf)
+
     state = self.r.ft('worldIdx').search(Query('*').sort_by('tick', asc=False).paging(0,1))
     worldState = orjson.loads(state.docs[0].json)
 
     self.world.__dict__.update(worldState)
     self.world.borders = pygame.Rect(self.world.borders)
+    self.background = pygame.Surface((self.world.borders.width, self.world.borders.height))
 
     # query genomeDB for best genome with fitness and hash
     docs = self.genomeDB.ft('genomes').aggregate(
@@ -137,6 +147,12 @@ class Simulator(object):
       creature.fitness = c['fitness']
       creature.babiesMade = c['babiesMade']
       creature.color = c['color']
+      creature.geneHash = c['geneHash']
+      creature.geneColor = c['geneColor']
+      creature.angle = c['angle']
+      creature.age = c['age']
+      creature.vel = c['vel']
+      creature.outs = c['outs']
 
       self.world.creatureList.append(creature)
     
@@ -154,13 +170,18 @@ class Simulator(object):
       option=orjson.OPT_SERIALIZE_NUMPY, 
       default=customEncoder
     ) 
-    worldState = orjson.loads(worldState)
+    w = orjson.loads(worldState)
 
-    self.r.json().set(f't:{self.world.tick}', '$', worldState)
+
+    if self.world.tick % self.config['DB_UPDATE_INC'] == 0:
+      self.r.json().set(f't:{self.world.tick}', '$', w)
+    self.r.publish('latestWorldState', worldState)
+
 
     for c in self.world.creatureList:
 
       if not self.genomeDB.exists('gene:' + c.geneHash):
+        print('new genome?')
         data = {
           'hash': c.geneHash, 
           'fitness': c.getFitness(),
@@ -172,12 +193,8 @@ class Simulator(object):
         }
         self.genomeDB.json().set('gene:' + data['hash'], '$', data)
 
-      # elif self.genomeDB.json().get('gene:' + c.geneHash, 'fitness') < c.getFitness():
-      #   self.genomeDB.json().set('gene:' + c.geneHash, 'fitness', c.getFitness())
-      # we just update lol
-      else:
+      elif self.genomeDB.json().get('gene:' + c.geneHash, 'fitness') < c.getFitness():
         self.genomeDB.json().set('gene:' + c.geneHash, 'fitness', c.getFitness())
-
 
   def main(self):
 
@@ -204,22 +221,6 @@ class Simulator(object):
           self.WINDOWSIZE = (event.w,event.h)
           self.window_surface = pygame.display.set_mode(self.WINDOWSIZE,pygame.RESIZABLE | pygame.DOUBLEBUF)
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-          button1 = pygame.mouse.get_pressed(num_buttons=3)[0]
-          if button1:
-            pos = list(pygame.mouse.get_pos())
-            widthScale = WORLDSIZE[0]/self.window_surface.get_width()
-            heightScale = WORLDSIZE[1]/self.window_surface.get_height()
-            pos[0] = pos[0] * widthScale
-            pos[1] = pos[1] * heightScale
-            for c in self.world.creatureList:
-              c: Creature
-              if c.rect.collidepoint(*pos):
-                print(c.geneColor)
-                print(c.age)
-                print(c.energyLeft)
-                print(c.getFitness())
-
         elif event.type == pygame.KEYDOWN:
           if event.key == pygame.K_q:
             updateWindow = not(updateWindow)
@@ -228,15 +229,14 @@ class Simulator(object):
             self.pauseSimulation[0] = int(not(self.pauseSimulation[0]))
 
       if not(self.pauseSimulation[0]):
-        self.offscreen_surface = pygame.Surface(WORLDSIZE)
+        self.offscreen_surface = pygame.Surface((self.world.borders.width, self.world.borders.height))
         # manager.update(time_delta)
 
         self.offscreen_surface.blit(self.background, (0, 0))
 
         ### simulation logic here
         self.world.update(self.offscreen_surface)
-        if self.world.tick % DB_UPDATE_INC == 0:
-          self.writeToRedis()
+        self.writeToRedis()
 
         if updateWindow:
           self.offscreen_surface = pygame.transform.scale(self.offscreen_surface, self.WINDOWSIZE)

@@ -29,6 +29,7 @@ def customEncoder(obj):
     enc.pop('brain')
     enc.pop('genes')
     enc.pop('_Sprite__g')
+
     return enc
   if isinstance(obj, Food):
     return obj.__dict__

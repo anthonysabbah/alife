@@ -23,19 +23,19 @@ class Creature(pygame.sprite.Sprite):
     self.genes = genes
     self.age = 0
     self.babiesMade = 0
-    self.dmg = MIN_DMG + \
-    ((self.genes.size - MIN_CREATURE_SIZE)/ \
-    (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))* \
-    (MAX_DMG  - MIN_DMG)
+    self.dmg = CONFIG['MIN_DMG'] + \
+    ((self.genes.size - CONFIG['MIN_CREATURE_SIZE'])/ \
+    (CONFIG['MAX_CREATURE_SIZE'] - CONFIG['MIN_CREATURE_SIZE']))* \
+    (CONFIG['MAX_DMG']  - CONFIG['MIN_DMG'])
   
-    self.dmg_cost = MIN_DMG_COST + \
-      ((self.dmg - MIN_DMG)/(MAX_DMG-MIN_DMG))*\
-      (MAX_DMG_COST - MIN_DMG_COST)
+    self.dmg_cost = CONFIG['MIN_DMG_COST'] + \
+      ((self.dmg - CONFIG['MIN_DMG'])/(CONFIG['MAX_DMG']- CONFIG['MIN_DMG']))*\
+      (CONFIG['MAX_DMG_COST'] - CONFIG['MIN_DMG_COST'])
     
-    self.birthCost = MIN_BIRTH_COST + \
-    ((self.genes.size - MIN_CREATURE_SIZE)/ \
-    (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))* \
-    (MAX_BIRTH_COST  - MIN_BIRTH_COST)
+    self.birthCost = CONFIG['MIN_BIRTH_COST'] + \
+    ((self.genes.size - CONFIG['MIN_CREATURE_SIZE'])/ \
+    (CONFIG['MAX_CREATURE_SIZE'] - CONFIG['MIN_CREATURE_SIZE']))* \
+    (CONFIG['MAX_BIRTH_COST']  - CONFIG['MIN_BIRTH_COST'])
     
     # hash of genome
     self.geneHash = (hashlib.sha256(self.genes.encode()).digest()).hex()
@@ -45,10 +45,10 @@ class Creature(pygame.sprite.Sprite):
     self.energyLeft = self.genes.energyCap
     self.energyConsumed = 0
 
-    self.energyLossRate = MIN_ENERGY_LOSS_RATE + \
-    (MAX_ENERGY_LOSS_RATE - MIN_ENERGY_LOSS_RATE) * \
-    (self.genes.size - MIN_CREATURE_SIZE)/ \
-    (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
+    self.energyLossRate = CONFIG['MIN_ENERGY_LOSS_RATE'] + \
+    (CONFIG['MAX_ENERGY_LOSS_RATE'] - CONFIG['MIN_ENERGY_LOSS_RATE']) * \
+    (self.genes.size - CONFIG['MIN_CREATURE_SIZE'])/ \
+    (CONFIG['MAX_CREATURE_SIZE']  - CONFIG['MIN_CREATURE_SIZE'])
 
     # dims = (width, self.genes.size + MAX_CREATURE_VIEW_DIST)
 
@@ -202,10 +202,10 @@ class Creature(pygame.sprite.Sprite):
     top = np.array(self.rectp0) + vecOffset
     bottom = np.array(self.rectp3) + vecOffset
     dirVec = (top - bottom)/np.linalg.norm(top - bottom)
-    vel = MAX_SPEED * self.outs[0] * dirVec
+    vel = CONFIG['MAX_SPEED'] * self.outs[0] * dirVec
     # print("vel: ", vel)
     self.vel = np.asarray(vel, dtype=int)
-    dTheta = int(MAX_ANGLE_RATE * self.outs[1] * (-1 if self.outs[1] < 0.5 else 1))
+    dTheta = int(CONFIG['MAX_ANGLE_RATE'] * self.outs[1] * (-1 if self.outs[1] < 0.5 else 1))
 
     self.move(self.vel[0], self.vel[1])
     self.rotate(dTheta)
@@ -330,7 +330,7 @@ class Creature(pygame.sprite.Sprite):
       surface=surface, 
       color=pygame.Color(255,255,255), 
       center=self.rect.center,
-      radius=self.body.get_width() * SENSOR_RANGE,
+      radius=self.body.get_width() * CONFIG['SENSOR_RANGE'],
       width=1,
     )
 
@@ -355,7 +355,7 @@ class Creature(pygame.sprite.Sprite):
       surface=surface, 
       color=pygame.Color(255,255,255), 
       center=self.leftAntennaEnd,
-      radius=self.body.get_width() * ANTENNA_RANGE_SCALER,
+      radius=self.body.get_width() * CONFIG['ANTENNA_RANGE_SCALER'],
       width=2,
     )
 
@@ -363,13 +363,13 @@ class Creature(pygame.sprite.Sprite):
       surface=surface, 
       color=pygame.Color(255,255,255), 
       center=self.rightAntennaEnd,
-      radius=self.body.get_width() * ANTENNA_RANGE_SCALER,
+      radius=self.body.get_width() * CONFIG['ANTENNA_RANGE_SCALER'],
       width=2,
     )
 
     barStart = pygame.math.Vector2(self.rect.bottomright) + pygame.math.Vector2(5, 0)
     barEnd = pygame.math.Vector2(self.rect.bottomright) \
-      - pygame.math.Vector2(-5, MAX_CREATURE_SIZE)
+      - pygame.math.Vector2(-5, CONFIG['MAX_CREATURE_SIZE'])
 
     energyLength = (self.energyLeft/self.genes.energyCap) * (barStart - barEnd)
 
