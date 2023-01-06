@@ -1,23 +1,14 @@
 services:
-  worldDB:
-    image: redis/redis-stack-server:7.0.6-RC2
+  redis:
+    build:
+      dockerfile: ./dockerfiles/Dockerfile_redis
+      context: .
     ports:
       - "6379:6379"
     volumes:
       - type: bind
-        source: ./redis-stuff/worldDB/worldDB-redis.conf
+        source: ./redis/data
+        target: /data
+      - type: bind
+        source: ./redis/redis-stack.conf
         target: /redis-stack.conf
-      - type: bind
-        source: ./redis-stuff/worldDB/
-        target: /data/
-  genomeDB:
-    image: redis/redis-stack-server:7.0.6-RC2
-    ports:
-      - "6380:6379"
-    volumes:
-      - type: bind
-        source: ./redis-stuff/genomeDB/genomeDB-redis.conf
-        target: /redis-stack.conf
-      - type: bind
-        source: ./redis-stuff/genomeDB/
-        target: /data/

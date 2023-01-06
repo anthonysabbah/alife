@@ -34,7 +34,6 @@ class Simulator(object):
     self.config = CONFIG
     self.world = World(borderDims=self.config['WORLDSIZE'])
     self.r = redis.Redis()
-    self.genomeDB = self.r.from_url('redis://localhost:6380/0')
     if not self.r.exists('CONFIG'):
       self.r.json().set('CONFIG', '$', self.config)
 
@@ -49,27 +48,9 @@ class Simulator(object):
 
     self.clock = pygame.time.Clock()
 
-    rLen = len(self.r.keys())
-    gLen = len(self.genomeDB.keys())
-    load = False
+    rLen = len(self.r.keys('t:*'))
     if rLen > 1:
-      if gLen > 1:
-        load = True
-      else:
-        print('ERROR: ONE OF THE DBs are EMPTY WHILST THE OTHER IS NOT')
-    elif gLen > 1:
-        print('ERROR: ONE OF THE DBs are EMPTY WHILST THE OTHER IS NOT')
-
-    if load:
       self.loadWorld()
-
-    try:
-      # create indices
-      self.r.execute_command('FT.CREATE worldIdx ON JSON PREFIX 1 t: SCHEMA $.tick AS tick NUMERIC $.maxFitness as maxFitness NUMERIC')
-      self.genomeDB.execute_command('FT.CREATE genomes ON JSON PREFIX 1 gene: SCHEMA $.hash AS hash TEXT $.fitness as fitness NUMERIC')
-    except:
-      # this is run when indices already exist
-      print('*** pretty sure indices already exist, skipping index creation... ***')
 
     # dumping shared mem addrs for the web server to access
     self.pauseMem = shared_memory.SharedMemory(create=True, size=1)
@@ -81,6 +62,7 @@ class Simulator(object):
   
   #TODO: use multiprocessing on some loading operations for speedup
   def loadWorld(self):
+    print('loading world state from redis')
 
     self.config = self.r.json().get('CONFIG')
     confFile = open('config.json', 'w+')
@@ -94,8 +76,8 @@ class Simulator(object):
     self.world.borders = pygame.Rect(self.world.borders)
     self.background = pygame.Surface((self.world.borders.width, self.world.borders.height))
 
-    # query genomeDB for best genome with fitness and hash
-    docs = self.genomeDB.ft('genomes').aggregate(
+    # query r for best genome with fitness and hash
+    docs = self.r.ft('genomes').aggregate(
       query=AggregateRequest('*')
         .sort_by(Desc('@fitness'), max=1)
         .group_by(['@fitness', '@hash'])
@@ -103,7 +85,7 @@ class Simulator(object):
 
     h = docs.rows[0][3]
     genomeId = f'gene:{h.decode("utf8")}'
-    bestGenome = self.genomeDB.json().get(genomeId, 'genome')
+    bestGenome = self.r.json().get(genomeId, 'genome')
     bestGenome['neuronalConnections'] = OrderedDict({x:torch.Tensor(bestGenome['neuronalConnections'][x])
         for x in bestGenome['neuronalConnections'].keys()}) 
 
@@ -132,7 +114,7 @@ class Simulator(object):
     self.world.creatureList = []
 
     for c in creatureList:
-      genome = self.genomeDB.json().get(f'gene:{c["geneHash"]}', 'genome')
+      genome = self.r.json().get(f'gene:{c["geneHash"]}', 'genome')
       genome['neuronalConnections'] = OrderedDict({x:torch.Tensor(genome['neuronalConnections'][x])
         for x in genome['neuronalConnections'].keys()})
       
@@ -180,7 +162,7 @@ class Simulator(object):
 
     for c in self.world.creatureList:
 
-      if not self.genomeDB.exists('gene:' + c.geneHash):
+      if not self.r.exists('gene:' + c.geneHash):
         print('new genome?')
         data = {
           'hash': c.geneHash, 
@@ -191,10 +173,10 @@ class Simulator(object):
             default=customEncoder
           ))
         }
-        self.genomeDB.json().set('gene:' + data['hash'], '$', data)
+        self.r.json().set('gene:' + data['hash'], '$', data)
 
-      elif self.genomeDB.json().get('gene:' + c.geneHash, 'fitness') < c.getFitness():
-        self.genomeDB.json().set('gene:' + c.geneHash, 'fitness', c.getFitness())
+      elif self.r.json().get('gene:' + c.geneHash, 'fitness') < c.getFitness():
+        self.r.json().set('gene:' + c.geneHash, 'fitness', c.getFitness())
 
   def main(self):
 

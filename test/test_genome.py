@@ -9,7 +9,7 @@ import unittest
 import torch
 from geneutils import Genome
 from brain import Brain 
-from config import *
+from config import CONFIG
 
 SIZE = 120
 ENERGY_CAP = 120
@@ -28,13 +28,13 @@ class TestGenome(unittest.TestCase):
     )
 
     self.assertEqual(genes.size, 
-    int(MIN_CREATURE_SIZE + (SIZE/255) * (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE))
+    int(CONFIG['MIN_CREATURE_SIZE'] + (SIZE/255) * (CONFIG['MAX_CREATURE_SIZE'] - CONFIG['MIN_CREATURE_SIZE']))
     )
 
     self.assertEqual(
       genes.energyCap, 
-      MIN_ENERGY_CAP + (genes.size - MIN_CREATURE_SIZE) * \
-      (MAX_ENERGY_CAP - MIN_ENERGY_CAP) / (MAX_CREATURE_SIZE - MIN_CREATURE_SIZE)
+      CONFIG['MIN_ENERGY_CAP'] + (genes.size - CONFIG['MIN_CREATURE_SIZE']) * \
+      (CONFIG['MAX_ENERGY_CAP'] - CONFIG['MIN_ENERGY_CAP']) / (CONFIG['MAX_CREATURE_SIZE'] - CONFIG['MIN_CREATURE_SIZE'])
     )
 
 if __name__ == '__main__':
