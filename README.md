@@ -26,8 +26,7 @@ python3 renderer.py
 docker compose up -d
 python3 redis_renderer.py
 ```
-Relevant redis configs and database snapshots are located under `redis-stuff` for
-each respective redis docker instance.
+The config file for redis, is in `redis/redis-stack.conf`. Point-in-time snapshots of the redis database are stored in `redis/data/dump.rdb`
 ### Extras
 - Run with env. var `ALIFE_HEADLESS=1` to trick sdl into using a dummy display driver - can be used to 
 run on machines without a display.
