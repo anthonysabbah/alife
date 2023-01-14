@@ -1,0 +1,13 @@
+.menu {
+  outline: 2px solid black;
+}
+
+.layoutBox {
+  outline: 2px solid black;
+}
+
+.menu{
+  padding: 5px;
+  margin-right: 2px;
+  margin-left: 2px;
+}
