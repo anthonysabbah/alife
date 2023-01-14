@@ -24,7 +24,7 @@ console.log('WebSocket port: ' + args.wsPort);
 
 // const redis_client = redis.createClient(args.redisPort, 'redis');
 const websocket_server = new WebSocket.Server({ port: args.wsPort });
-const not_implemented = () => { console.log("welp, message handling function hasn't been implemented lol")};
+const not_implemented = () => { console.log("welp, this message handling function hasn't been implemented lol")};
 console.log('Server Running!');
 
 
@@ -90,6 +90,3 @@ websocket_server.on('connection', (socket: ConnectionState, req) => {
     socket.redisClient.disconnect();
   });
 });
-
-// setInterval(() => {
-// });

@@ -12,6 +12,9 @@
     "ws": "^8.12.0",
     "yargs": "^17.6.2"
   },
+  "scripts": {
+    "start": "npx ts-node src/index.ts"
+  },
   "devDependencies": {
     "ts-node": "^10.9.1",
     "tslib": "^2.4.1"

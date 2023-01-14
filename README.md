@@ -7,6 +7,8 @@ the simulator itself which includes an extensive overview of creatures (genomes,
 - Speed - The simulator itself should be fast, and the chosen data store solution (redis) should be able to keep up with it at a reasonable rate. 
   - Trying to hit ~20FPS with `MIN_CREATURES=20`, `WORLDSIZE=(1500,1500)` and `DB_UPDATE_INC=1` on a Macbook Air M1 w/ 8GB RAM
     - The simulator is primarily bottlenecked by world state serialization and writes to redis (takes ~50ms so 20FPS). 
+- Distributed - Every major component should be able to run on seperate machines (Simulator, DB, Websockets Server, Frontend)
+
 ## Configuration
 Edit simulator constants in [config.json](./config.json)\*\
 Wouldn't recommend touching [docker-compose.yaml](./docker-compose.yaml) or anything
@@ -14,7 +16,8 @@ docker related for now.
 
 \***NOTE:** [config.json](./config.json) gets overwritten on every run of the simulator 
 when it is connected to redis, so it is highly recommended to keep a copy of it config in [config.temp.json](./config.json).
-## Run
+## Setup 
+### Install simulator dependencies
 ```
 pip install requirements.txt
 ```
@@ -27,6 +30,17 @@ python3 renderer.py
 docker compose up -d
 python3 redis_renderer.py
 ```
+### WebSockets Server (WIP)
+```
+cd ./api
+yarn
+yarn start
+```
+There's also a simple WS client that can be run to test out a local WS server:
+```
+node src/index.js
+``` 
+
 The config file for redis, is in `redis/redis-stack.conf`. Point-in-time snapshots of the redis database are stored in `redis/data/dump.rdb`
 ### Extras
 - Run with env. var `ALIFE_HEADLESS=1` to trick sdl into using a dummy display driver when running `redis_renderer.py` - can be used to 
