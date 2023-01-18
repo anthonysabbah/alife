@@ -46,7 +46,7 @@ const MESSAGE_EVENT_HANDLERS: any = {
   },
 
   // run client-sent redis commands
-  runCommand: async (socket: ConnectionState, command: Array<string>) => {
+  cmd: async (socket: ConnectionState, command: Array<string>) => {
     let msg: Buffer = await socket.redisClient.sendCommand(command);
     socket.send(msg.toString("hex"));
   },

@@ -7,3 +7,4 @@ memaddrs.txt
 junk/
 redis/data/*.rdb
 api/src/index.js
+go_server/go_server

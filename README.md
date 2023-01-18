@@ -30,15 +30,23 @@ python3 renderer.py
 docker compose up -d
 python3 redis_renderer.py
 ```
-### WebSockets Server (WIP)
+### WebSockets Servers (WIP)
+**Go:**
 ```
-cd ./api
-yarn
-yarn start
+cd go_server
+go build .
+./go_server 
 ```
-There's also a simple WS client that can be run to test out a local WS server:
-```
-node src/index.js
+
+**Node JS:**
+  ```
+  cd ./api
+  yarn
+  yarn start
+  ```
+  There's also a simple WS client that can be run to test out a local WS server:
+  ```
+  node src/testClient.js
 ``` 
 
 The config file for redis, is in `redis/redis-stack.conf`. Point-in-time snapshots of the redis database are stored in `redis/data/dump.rdb`
@@ -63,9 +71,9 @@ Using the API is pretty self explanatory:
 - `GET`  request to `/getPause` gets the pause status of the simulation.
 
 ## TODO - sorted by priority:
-- Connect the WebSocket server to the REST API
 - Finish writing UI.
 - Finish writing [Simulator Overview](#simulator-overview) section.
+- Connect the WebSocket server to the REST API
 - Optimize the living crap out of the simulator.
   - Add unit testing for Creatures, Food, and World
   - Make sure to test gene hash consistency between data on redis and simulator memory
