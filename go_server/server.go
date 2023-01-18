@@ -17,10 +17,10 @@ import (
 )
 
 type ClientInfo struct {
-	conn   *websocket.Conn
-	rdb    *redis.Client
-	pubsub *redis.PubSub
-	ctx    *context.Context
+  conn   *websocket.Conn
+  rdb    *redis.Client
+  pubsub *redis.PubSub
+  ctx    *context.Context
 }
 
 var addr = flag.String("addr", "localhost:6969", "http service address")
@@ -30,92 +30,92 @@ var simAddr = flag.String("s", "localhost:5000", "alife simulator web API addres
 var upgrader = websocket.Upgrader{} // use default options
 
 func handleMessage(client ClientInfo, rawMsg []byte) {
-	message := string(rawMsg)
-	commandNParams := strings.Split(message, ";")
-	command := commandNParams[0]
-	params := make([]interface{}, 1)
-	if len(commandNParams) > 1 {
-		rawParams := strings.Split(commandNParams[1], " ")
-		params = make([]interface{}, len(rawParams))
-		for i, v := range rawParams {
-			params[i] = v
-		}
-	}
+  message := string(rawMsg)
+  commandNParams := strings.Split(message, ";")
+  command := commandNParams[0]
+  params := make([]interface{}, 1)
+  if len(commandNParams) > 1 {
+    rawParams := strings.Split(commandNParams[1], " ")
+    params = make([]interface{}, len(rawParams))
+    for i, v := range rawParams {
+      params[i] = v
+    }
+  }
 
-	switch command {
-	case "subscribe":
-		client.pubsub = client.rdb.Subscribe(*client.ctx, "latestWorldState")
-		defer client.pubsub.Close()
-		ch := client.pubsub.Channel()
-		for msg := range ch {
-			// log.Print(msg.Channel, msg.Payload)
-			client.conn.WriteMessage(1, []byte(msg.Payload)) //messageType = 1 since we're just sending text data
-		}
+  switch command {
+  case "subscribe":
+    client.pubsub = client.rdb.Subscribe(*client.ctx, "latestWorldState")
+    defer client.pubsub.Close()
+    ch := client.pubsub.Channel()
+    for msg := range ch {
+      // log.Print(msg.Channel, msg.Payload)
+      client.conn.WriteMessage(1, []byte(msg.Payload)) //messageType = 1 since we're just sending text data
+    }
 
-	case "cmd":
-		// val, err := client.rdb.Do(*client.ctx, params...).Result()
-		val := client.rdb.Do(*client.ctx, params...).String()
+  case "cmd":
+    // val, err := client.rdb.Do(*client.ctx, params...).Result()
+    val := client.rdb.Do(*client.ctx, params...).String()
 
-		// if err == nil {
-		// log.Println(val)
-		// log.Print(val)
-		client.conn.WriteMessage(1, []byte(val))
-		// } else {
-		// 	client.conn.WriteMessage(1, []byte("invalid command"))
-		// }
+    // if err == nil {
+    // log.Println(val)
+    // log.Print(val)
+    client.conn.WriteMessage(1, []byte(val))
+    // } else {
+    //   client.conn.WriteMessage(1, []byte("invalid command"))
+    // }
 
-	case "togglePause":
-		httpAddr := "http://" + *simAddr + "/togglePause"
-		http.Post(httpAddr, "", nil)
+  case "togglePause":
+    httpAddr := "http://" + *simAddr + "/togglePause"
+    http.Post(httpAddr, "", nil)
 
-	default:
-		errMsg := []byte("not a valid command")
-		client.conn.WriteMessage(1, errMsg)
-	}
+  default:
+    errMsg := []byte("not a valid command")
+    client.conn.WriteMessage(1, errMsg)
+  }
 
 }
 
 func echo(w http.ResponseWriter, r *http.Request) {
-	// ws connection, context, and redis client
-	c, err := upgrader.Upgrade(w, r, nil)
-	ctx := context.Background()
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     *redisAddr,
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
+  // ws connection, context, and redis client
+  c, err := upgrader.Upgrade(w, r, nil)
+  ctx := context.Background()
+  rdb := redis.NewClient(&redis.Options{
+    Addr:     *redisAddr,
+    Password: "", // no password set
+    DB:       0,  // use default DB
+  })
 
-	client := ClientInfo{c, rdb, nil, &ctx}
+  client := ClientInfo{c, rdb, nil, &ctx}
 
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-	defer client.conn.Close()
-	defer client.rdb.Close()
-	for {
-		_, message, err := client.conn.ReadMessage()
-		if err != nil {
-			log.Println("read:", err)
-			break
-		}
-		log.Printf("recv: %s", message)
-		handleMessage(client, message)
+  if err != nil {
+    log.Print("upgrade:", err)
+    return
+  }
+  defer client.conn.Close()
+  defer client.rdb.Close()
+  for {
+    _, message, err := client.conn.ReadMessage()
+    if err != nil {
+      log.Println("read:", err)
+      break
+    }
+    log.Printf("recv: %s", message)
+    handleMessage(client, message)
 
-		// err = c.WriteMessage(mt, message)
-	}
+    // err = c.WriteMessage(mt, message)
+  }
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host+"/")
+  homeTemplate.Execute(w, "ws://"+r.Host+"/")
 }
 
 func main() {
-	flag.Parse()
-	log.SetFlags(0)
-	http.HandleFunc("/", echo)
-	http.HandleFunc("/ui", home)
-	go log.Fatal(http.ListenAndServe(*addr, nil))
+  flag.Parse()
+  log.SetFlags(0)
+  http.HandleFunc("/", echo)
+  http.HandleFunc("/ui", home)
+  go log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
 // webpage for sending websockets packets to the server instance
