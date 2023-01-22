@@ -1,0 +1,12 @@
+__pycache__
+cache
+.DS_Store
+*node_modules
+yarn-error.log
+memaddrs.txt
+junk/*
+redis/data/
+api/*
+go_server/*
+test/*
+./*.py

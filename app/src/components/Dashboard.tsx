@@ -1,6 +1,12 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import {GlobalContext, defaultContext} from './GlobalContext';
+
 import Button from '@mui/material/Button';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+// import Icon from '@mui/material/Icon';
+
+
 import { WidthProvider, Responsive } from "react-grid-layout";
 import {
   Chart as ChartJS,
@@ -16,6 +22,8 @@ import { Line } from 'react-chartjs-2';
 
 import './Dashboard.css';
 import ConnectionBox from './ConnectionBox';
+import RealtimeLineChart from './RealtimeLineChart';
+import GeneBox from './GeneBox';
 
 ChartJS.register(
   CategoryScale,
@@ -68,12 +76,18 @@ const originalLayouts = getFromLS("layouts") || [];
 export default function Dashboard() {
 
   const [layouts, setLayout] = useState(JSON.parse(JSON.stringify(originalLayouts)));
-  const dashboardContext = useContext(GlobalContext);
+  // const dashboardContext = useContext(GlobalContext);
+  const [wsConn, setWsConn] = useState(defaultContext.wsConnection)
+  const [isLocked, setIsLocked] = useState(false)
 
-  // const [state, setState] = useState({
-  //   wsConnection: defaultContext.wsConnection,
-  //   setWsConnection: setState
-  // })
+  const updateConn = (value: React.SetStateAction<string>) => {
+    setWsConn(value)
+  }
+
+  const defState = {
+    wsConnection: wsConn, 
+    setWsConnection: updateConn
+  }
 
   function saveLayout(layout: ReactGridLayout.Layout[], layouts: ReactGridLayout.Layouts) {
     saveToLS("layouts", layouts);
@@ -85,11 +99,28 @@ export default function Dashboard() {
   }
 
   return (
-    // <GlobalContext.Provider value={state}>
+    <GlobalContext.Provider value={defState}>
       <div>
         <div className="menu">
+
+          <div className="menuItem">
             <Button variant="contained" onClick={resetLayout}>Reset Layout</Button>
+          </div>
+
+
+          {/* <div className="menuItem">
+            <Button 
+              variant="contained" 
+              startIcon={isLocked ? <LockIcon/>: <LockOpenIcon/>}
+              onClick={() => setIsLocked(!isLocked)}
+            />
+          </div> */}
+
+          <div className="menuItem">
             <ConnectionBox/>
+          </div>
+
+
           </div>
         <div>
           <ResponsiveReactGridLayout
@@ -99,18 +130,20 @@ export default function Dashboard() {
               saveLayout(layout, layouts)
             }
           >
-            <div key="1" className="layoutBox" data-grid={{ w: 2, h: 2, x: 0, y: 0 }}>
-              <Button variant="contained" onClick={() => console.log(defaultContext)}>Hello World</Button>
+            <div key="1" className="layoutBox" data-grid={{ w: 2, h: 2, x: 0, y: 0, static: isLocked}}>
+              <Button variant="contained" onClick={() => console.log(defaultContext)}>Log WS from Context</Button>
               <span className="text">1</span>
             </div>
             <div key="2" className="layoutBox" data-grid={{ w: 2, h: 2, x: 2, y: 0 }}>
               <span className="text">2</span>
+              {/* <Line options={options} data={data} /> */}
             </div>
             <div key="3" className="layoutBox" data-grid={{ w: 2, h: 2, x: 4, y: 0 }}>
-              <Line options={options} data={data} />
+              <RealtimeLineChart/>
               {/* <span className="text"></span> */}
             </div>
             <div key="4" className="layoutBox" data-grid={{ w: 2, h: 2, x: 6, y: 0 }}>
+              <GeneBox></GeneBox>
               <span className="text">4</span>
             </div>
             <div key="5" className="layoutBox" data-grid={{ w: 2, h: 2, x: 8, y: 0 }}>
@@ -119,7 +152,7 @@ export default function Dashboard() {
           </ResponsiveReactGridLayout>
         </div>
       </div>
-    // </GlobalContext.Provider>
+    </GlobalContext.Provider>
 
   );
   }

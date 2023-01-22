@@ -1,5 +1,4 @@
-
-import WebSocket from 'ws';
+import { GlobalContext, defaultContext } from './GlobalContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,15 +8,14 @@ import {
   Title,
   Tooltip,
   Legend,
+  ChartData
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import "chartjs-plugin-streaming";
+// import "chartjs-plugin-streaming";
 import { useState, useEffect, useRef } from 'react';
-
-type ConnectionInfo  = {
-  url: string,
-  port: number
-};
+import useWebSocket from 'react-use-websocket';
+import { useContext } from 'react';
+import { TextField } from '@mui/material';
 
 ChartJS.register(
   CategoryScale,
@@ -29,66 +27,118 @@ ChartJS.register(
   Legend
 );
 
-
-
-export default function RealtimeLineChart(connectionInfo: ConnectionInfo) {
-  const [connection, setConnection] = useState(new WebSocket('ws://' + connectionInfo.url + ':' + connectionInfo.port));
-
-  const config = useRef({
-    responsive: true,
-    type: "line",
-    data: {
-      datasets: [
-        {
-          label: "Max Fitness",
-          data: []
-        },
-      ]
-    }
-  });
-
-  const options = useRef({
-    elements: {
-      // line: {
-      //   tension: 0.5
-      // }
+const options = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'top' as const,
     },
-    scales: {
-      xAxes: [
-        {
-          type: "realtime",
-          distribution: "linear",
-          ticks: {
-            displayFormats: 1,
-            maxRotation: 0,
-            minRotation: 0,
-            stepSize: 1,
-            maxTicksLimit: 240,
-            // source: "auto",
-            autoSkip: true,
-          }
-        }
-      ],
-      yAxes: [
-        {
-          ticks: {
-            beginAtZero: true,
-          }
-        }
-      ]
-    }
-  })
+    // title: {
+    //   display: true,
+    //   text: 'Chart.js Line Chart',
+    // },
+  },
+};
 
-  useEffect(
-    () => {
-      connection.on('message', (rawMsg) => {
-        const msg = rawMsg.toString('utf8');
-        
-      });
+
+
+export default function RealtimeLineChart() {
+  const connectionInfo = useContext(GlobalContext)
+  const { sendMessage, lastMessage} = useWebSocket( 
+    connectionInfo.wsConnection,
+    {
+      shouldReconnect: (closeEvent) => true
     }
-  )
+    );
+
+  const [count, setCount] = useState(30)
+  const [msg, setMsg] = useState("cmd;TS.REVRANGE maxFitness - + count " + count)
+  const [pollInterval, setPollInterval] = useState(20000)
+  // const [recvdData, setRecvdData] = useState([])
+  const defDatasets = {
+    labels: [0],
+    datasets: [{
+      label: 'Max. Fitness',
+      data: [0],
+      borderColor: 'rgb(255, 99, 132)',
+      backgroundColor: 'rgba(255, 99, 132, 0.5)',
+    }],
+  };
+
+  const [datasets, setDatasets] = useState(defDatasets)
+
+  const pollRedis = () => {
+    if (count > 0){
+      setMsg("cmd;TS.REVRANGE maxFitness - + count " + count)
+      sendMessage(msg)
+      console.log("SENDING MSG")
+    }
+  }
+
+  const convertData = (d: string) => {
+    let converted = []
+    const data: any = JSON.parse(d.split(":")[1].trim().replaceAll(" ", ","))
+    for (var i in data){
+      converted.push({x: data[i][0], y: data[i][1]})
+    }
+    return converted
+  }
+
+  useEffect(() => {
+    if (lastMessage != null) {
+      console.log('got msg')
+      const converted = convertData(lastMessage.data).reverse()
+      const labels = converted.map((p, _) =>{
+        return p.x
+      })
+      const vals = converted.map((p, _) =>{
+        return p.y
+      })
+
+      const datasets = {
+        labels: labels,
+        datasets: [{
+          label: 'Max. Fitness',
+          data: vals,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        }],
+      };
+
+      setDatasets(datasets)
+
+      console.log(labels)
+      console.log(vals)
+    }
+    let timerId = setTimeout(pollRedis, pollInterval)  
+    return () => clearTimeout(timerId)
+  }, [lastMessage, pollInterval, count])
     
   return (
-    <Line data={config.current.data}/>
+    <div className="graphDiv">
+      <Line 
+        data={datasets}
+        options={options}
+      > </Line>
+      <TextField 
+        id="outlined-basic"
+        label="Polling interval (ms)" 
+        variant="standard" 
+        value={pollInterval}
+        onChange={(e) => {
+          setPollInterval(parseInt(e.target.value))
+        }}
+      />
+      <TextField 
+        id="outlined-basic"
+        label="Max # of datapoints" 
+        variant="standard" 
+        value={count}
+        onChange={(e) => {
+          setCount(parseInt(e.target.value))
+        }}
+      />
+    </div>
   );
 }

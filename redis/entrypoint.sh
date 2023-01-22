@@ -32,6 +32,9 @@ ${REDIS_ARGS}
 redis-cli FT.CREATE worldIdx ON JSON PREFIX 1 t: SCHEMA $.tick AS tick NUMERIC $.maxFitness as maxFitness NUMERIC
 redis-cli FT.CREATE genomes ON JSON PREFIX 1 gene: SCHEMA $.hash AS hash TEXT $.fitness as fitness NUMERIC
 
+# CREATE TIMESERIES TO TRACK MAX CREATURE FITNESS:
+TS.CREATE maxFitness
+
 redis-cli save
 redis-cli shutdown
 

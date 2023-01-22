@@ -33,6 +33,7 @@ class Simulator(object):
   def __init__(self):
     self.config = CONFIG
     self.world = World(borderDims=self.config['WORLDSIZE'])
+    self.lastMaxFitness = self.world.maxFitness
     self.r = redis.Redis()
     if not self.r.exists('CONFIG'):
       self.r.json().set('CONFIG', '$', self.config)
@@ -154,12 +155,18 @@ class Simulator(object):
     ) 
     w = orjson.loads(worldState)
 
-
     if self.world.tick % self.config['DB_UPDATE_INC'] == 0:
-      self.r.json().set(f't:{self.world.tick}', '$', w)
+      # pipelining
+      pipe = self.r.pipeline()
+      pipe.json().set(f't:{self.world.tick}', '$', w)
+      pipe.set('latestTick', self.world.tick)
+      if self.world.maxFitness != self.lastMaxFitness:
+        pipe.ts().add('maxFitness', self.world.tick, self.world.maxFitness)
+        self.world.lastMaxFitness = self.world.maxFitness
+      pipe.execute()
+
     self.r.publish('latestWorldState', worldState)
-
-
+      
     for c in self.world.creatureList:
 
       if not self.r.exists('gene:' + c.geneHash):

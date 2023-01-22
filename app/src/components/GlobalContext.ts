@@ -1,9 +1,8 @@
-import WebSocket from 'ws';
-import React, { useContext, useState } from 'react';
+import React from 'react';
 
 export const defaultContext = {
-  wsConnection: "ws://127.0.0.1:6969",
-  setWsConnection: () => {},
+  wsConnection: "ws://localhost:6969",
+  setWsConnection: (conn: string) => {},
 };
 
 export const GlobalContext = React.createContext(defaultContext);
