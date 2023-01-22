@@ -53,16 +53,9 @@ func handleMessage(client ClientInfo, rawMsg []byte) {
     }
 
   case "cmd":
-    // val, err := client.rdb.Do(*client.ctx, params...).Result()
-    val := client.rdb.Do(*client.ctx, params...).String()
-
-    // if err == nil {
-    // log.Println(val)
-    // log.Print(val)
+    ret := client.rdb.Do(*client.ctx, params...)
+    val := ret.String()
     client.conn.WriteMessage(1, []byte(val))
-    // } else {
-    //   client.conn.WriteMessage(1, []byte("invalid command"))
-    // }
 
   case "togglePause":
     httpAddr := "http://" + *simAddr + "/togglePause"
@@ -77,6 +70,7 @@ func handleMessage(client ClientInfo, rawMsg []byte) {
 
 func echo(w http.ResponseWriter, r *http.Request) {
   // ws connection, context, and redis client
+  upgrader.CheckOrigin = func(r *http.Request) bool { return true }
   c, err := upgrader.Upgrade(w, r, nil)
   ctx := context.Background()
   rdb := redis.NewClient(&redis.Options{
@@ -144,6 +138,7 @@ window.addEventListener("load", function(evt) {
         }
         ws = new WebSocket("{{.}}");
         ws.onopen = function(evt) {
+            print(ws.url)
             print("OPEN");
         }
         ws.onclose = function(evt) {
